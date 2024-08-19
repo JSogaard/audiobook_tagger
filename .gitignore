@@ -231,3 +231,8 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,rust,rust-analyzer,visualstudiocode,intellij
+test_audiobook/01.mp3
+test_audiobook/02.mp3
+test_audiobook/03.mp3
+test_audiobook/04.mp3
+test_audiobook/05.mp3
