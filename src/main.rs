@@ -3,6 +3,10 @@ use std::path::PathBuf;
 
 fn main() {
     let matches = cli();
+
+    // match matches.subcommand() {
+
+    // }
 }
 
 fn cli() -> ArgMatches {
@@ -61,6 +65,82 @@ fn cli() -> ArgMatches {
             .arg(
                 Arg::new("title")
                 .required(true)
+            )
+            .arg(
+                Arg::new("paths")
+                .required(true)
+                .num_args(1..)
+                .value_parser(value_parser!(PathBuf))
+            )
+        )
+        .subcommand(
+            Command::new("change-author")
+            .about("Change the author tag of each specified file to the given author name.")
+            .arg(
+                Arg::new("author")
+                .required(true)
+            )
+            .arg(
+                Arg::new("paths")
+                .required(true)
+                .num_args(1..)
+                .value_parser(value_parser!(PathBuf))
+            )
+        )
+        .subcommand(
+            Command::new("change-narrator")
+            .about("Change the narrator (composer) tag of each specified file to the given narrator name.")
+            .arg(
+                Arg::new("narrator")
+                .required(true)
+            )
+            .arg(
+                Arg::new("paths")
+                .required(true)
+                .num_args(1..)
+                .value_parser(value_parser!(PathBuf))
+            )
+        )
+        .subcommand(
+            Command::new("change-tag")
+            .about("Change a specified tag of each file to the given value.")
+            .arg(
+                Arg::new("tag")
+                .required(true)
+            )
+            .arg(
+                Arg::new("value")
+                .required(true)
+            )
+            .arg(
+                Arg::new("paths")
+                .required(true)
+                .num_args(1..)
+                .value_parser(value_parser!(PathBuf))
+            )
+        )
+        .subcommand(
+            Command::new("combine-files")
+            .about("Combine multiple audio files into a single file, with the input files as chapter markers.")
+            .arg(
+                Arg::new("paths")
+                .required(true)
+                .num_args(1..)
+                .value_parser(value_parser!(PathBuf))
+            )
+            .arg(
+                Arg::new("output")
+                .long("output")
+                .short('o')
+                .default_value("./output.mp4")
+                .value_parser(value_parser!(PathBuf))
+            )
+            .arg(
+                Arg::new("bitrate")
+                .long("bitrate")
+                .short('b')
+                .default_value("64")
+                .value_parser(value_parser!(u32))
             )
         )
     .get_matches();
