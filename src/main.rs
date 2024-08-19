@@ -1,12 +1,17 @@
+use audiobook_tagger::show_tags;
 use clap::{command, value_parser, Arg, ArgMatches, Command};
-use std::path::PathBuf;
 
 fn main() {
     let matches = cli();
 
-    // match matches.subcommand() {
-
-    // }
+    if let Some((subcommand, args)) = matches.subcommand() {
+        match subcommand {
+            "show-tags" => {
+                show_tags(args.get_many::<String>("paths").unwrap())
+            },
+            _ => {}
+        }
+    }
 }
 
 fn cli() -> ArgMatches {
@@ -18,7 +23,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             ))
 
         .subcommand(
@@ -28,7 +33,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
             .arg(
                 Arg::new("start")
@@ -49,7 +54,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
             .arg(
                 Arg::new("start")
@@ -70,7 +75,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
         )
         .subcommand(
@@ -84,7 +89,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
         )
         .subcommand(
@@ -98,7 +103,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
         )
         .subcommand(
@@ -116,7 +121,7 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
         )
         .subcommand(
@@ -126,14 +131,14 @@ fn cli() -> ArgMatches {
                 Arg::new("paths")
                 .required(true)
                 .num_args(1..)
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
             .arg(
                 Arg::new("output")
                 .long("output")
                 .short('o')
                 .default_value("./output.mp4")
-                .value_parser(value_parser!(PathBuf))
+                // .value_parser(value_parser!(PathBuf))
             )
             .arg(
                 Arg::new("bitrate")
