@@ -1,14 +1,17 @@
-use audiobook_tagger::show_tags;
-use clap::{command, value_parser, Arg, ArgMatches, Command};
+use audiobook_tagger::{number_files, show_tags};
+use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
 fn main() {
     let matches = cli();
 
     if let Some((subcommand, args)) = matches.subcommand() {
         match subcommand {
-            "show-tags" => {
-                show_tags(args.get_many::<String>("paths").unwrap())
-            },
+            "show-tags" => show_tags(args.get_many::<String>("paths").unwrap()),
+            "number-files" => {
+                let paths: ValuesRef<String> = args.get_many::<String>("paths").unwrap();
+                let start: &u32 = args.get_one::<u32>("start").unwrap();
+                number_files(paths, *start);
+            }
             _ => {}
         }
     }
@@ -39,7 +42,7 @@ fn cli() -> ArgMatches {
                 Arg::new("start")
                 .long("start")
                 .short('s')
-                .value_parser(value_parser!(i32))
+                .value_parser(value_parser!(u32))
                 .default_value("1")
             )
         )
