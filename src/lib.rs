@@ -2,10 +2,10 @@ use clap::parser::ValuesRef;
 use glob::glob;
 use id3::{Error, ErrorKind, Tag, TagLike};
 use prettytable::{row, Table};
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{collections::BTreeSet, io, path::PathBuf};
 
-pub fn show_tags(paths: ValuesRef<String>) {
-    let paths: BTreeSet<PathBuf> = expand_wildcards(paths);
+pub fn show_tags(paths: ValuesRef<String>) -> Result<(), io::Error> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
     let mut table = Table::new();
     table.add_row(row![
         b->"File",
@@ -38,39 +38,63 @@ pub fn show_tags(paths: ValuesRef<String>) {
         ]);
     }
     table.printstd();
+    Ok(())
 }
 
-pub fn number_files(paths: ValuesRef<String>, start: u32) {
-    let paths: BTreeSet<PathBuf> = expand_wildcards(paths);
+pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), io::Error> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
-        let mut tag = match Tag::read_from_path(path) {
-            Ok(tag) => tag,
-            Err(Error {
-                kind: ErrorKind::NoTag,
-                ..
-            }) => Tag::new(),
-            Err(err) => {
-                eprintln!("Failed to read tag from path: {:?}\nError: {}", path, err);
-                panic!();
-            }
-        };
+        let mut tag = read_tag(path)?;
         tag.set_track(i);
-        let _ = tag.write_to_path(path, id3::Version::Id3v23);
+        if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
+            return Err(io::Error::other(err.description));
+        }
     }
+    Ok(())
 }
 
-pub fn expand_wildcards(raw_paths: ValuesRef<String>) -> BTreeSet<PathBuf> {
+pub fn number_chapters(naming_scheme: &String, paths: ValuesRef<String>, start: i32) -> Result<(), io::Error> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+
+    for (path, i) in paths.iter().zip(start..) {
+        let mut tag = read_tag(path)?;
+        let chapter_name = naming_scheme.replace("%n", &i.to_string());
+        tag.set_title(chapter_name);
+        if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
+            return Err(io::Error::other(err.description));
+        }
+    }
+    Ok(())
+}
+
+fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, io::Error> {
     let mut parsed_paths = BTreeSet::new();
 
     for raw_path in raw_paths {
-        if let Ok(globs) = glob(&raw_path) {
-            for glob_path in globs {
-                parsed_paths.insert(glob_path.unwrap());
+        match glob(&raw_path) {
+            Ok(globs) => {
+                for glob_path in globs {
+                    parsed_paths.insert(glob_path.unwrap());
+                }
             }
-        } else {
-            panic!("A provided path was invalid");
+            Err(glob_error) => return Err(io::Error::other(glob_error)),
         }
     }
-    parsed_paths
+    if parsed_paths.len() == 0 {
+        return Err(io::Error::other("No files matches the provided path argument"));
+    }
+    Ok(parsed_paths)
 }
+
+fn read_tag(path: &PathBuf) -> Result<Tag, io::Error> {
+    match Tag::read_from_path(path) {
+        Ok(tag) => Ok(tag),
+        Err(Error {
+            kind: ErrorKind::NoTag,
+            ..
+        }) => Ok(Tag::new()),
+        Err(err) => {
+            return Err(io::Error::other(err.description));
+        }
+}}

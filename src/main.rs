@@ -1,20 +1,29 @@
-use audiobook_tagger::{number_files, show_tags};
+use std::error::Error;
+
+use audiobook_tagger::{number_chapters, number_files, show_tags};
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>>{
     let matches = cli();
 
     if let Some((subcommand, args)) = matches.subcommand() {
         match subcommand {
-            "show-tags" => show_tags(args.get_many::<String>("paths").unwrap()),
+            "show-tags" => show_tags(args.get_many::<String>("paths").unwrap())?,
             "number-files" => {
-                let paths: ValuesRef<String> = args.get_many::<String>("paths").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
                 let start: &u32 = args.get_one::<u32>("start").unwrap();
-                number_files(paths, *start);
+                number_files(paths, *start)?;
+            }
+            "number-chapters" => {
+                let naming_scheme: &String = args.get_one("naming-scheme").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                let start: &i32 = args.get_one("start").unwrap();
+                number_chapters(naming_scheme, paths, *start)?;
             }
             _ => {}
         }
     }
+    Ok(())
 }
 
 fn cli() -> ArgMatches {
@@ -31,7 +40,7 @@ fn cli() -> ArgMatches {
 
         .subcommand(
             Command::new("number-files")
-            .about("Update the track number tag of each file with a sequential number, starting from the specified value.")
+            .about("Update the track number tag of each file with a sequential number, starting from the specified value. The starting number must be positiv or zero")
             .arg(
                 Arg::new("paths")
                 .required(true)
