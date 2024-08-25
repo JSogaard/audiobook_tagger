@@ -1,10 +1,19 @@
 use clap::parser::ValuesRef;
 use glob::glob;
-use id3::{Error, ErrorKind, Tag, TagLike};
+use id3::{Content, ErrorKind, Frame, Tag, TagLike, Version};
 use prettytable::{row, Table};
-use std::{collections::BTreeSet, io, path::PathBuf};
+use std::{collections::BTreeSet, path::PathBuf};
+use thiserror::Error;
 
-pub fn show_tags(paths: ValuesRef<String>) -> Result<(), io::Error> {
+#[derive(Error, Debug)]
+pub enum CommandError {
+    #[error("An error occured while reading or writing to file")]
+    IoError(String),
+    #[error("The pattern did not contain the correct format specifier(s)")]
+    NoFormatSpecifierError,
+}
+
+pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
     let mut table = Table::new();
     table.add_row(row![
@@ -41,35 +50,48 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), io::Error> {
     Ok(())
 }
 
-pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), io::Error> {
+pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), CommandError> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
-        let mut tag = read_tag(path)?;
+        let mut tag: Tag = read_tag(path)?;
         tag.set_track(i);
         if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
-            return Err(io::Error::other(err.description));
+            return Err(CommandError::IoError(err.description));
         }
     }
     Ok(())
 }
 
-pub fn number_chapters(naming_scheme: &String, paths: ValuesRef<String>, start: i32) -> Result<(), io::Error> {
+pub fn number_chapters(
+    naming_scheme: &String,
+    paths: ValuesRef<String>,
+    start: i32,
+) -> Result<(), CommandError> {
+    if !naming_scheme.contains("%n") {
+        return Err(CommandError::NoFormatSpecifierError);
+    }
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
-        let mut tag = read_tag(path)?;
         let chapter_name = naming_scheme.replace("%n", &i.to_string());
-        tag.set_title(chapter_name);
-        if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
-            return Err(io::Error::other(err.description));
-        }
+        write_frame(path, "TIT2", &chapter_name)?;
     }
     Ok(())
 }
 
-fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, io::Error> {
-    let mut parsed_paths = BTreeSet::new();
+fn write_frame(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), CommandError> {
+    let mut tag: Tag = read_tag(&path)?;
+    let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
+    tag.add_frame(frame);
+    if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
+        return Err(CommandError::IoError(err.description));
+    }
+    Ok(())
+}
+
+fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, CommandError> {
+    let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
     for raw_path in raw_paths {
         match glob(&raw_path) {
@@ -78,23 +100,26 @@ fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, i
                     parsed_paths.insert(glob_path.unwrap());
                 }
             }
-            Err(glob_error) => return Err(io::Error::other(glob_error)),
+            Err(glob_error) => return Err(CommandError::IoError(glob_error.msg.to_string())),
         }
     }
     if parsed_paths.len() == 0 {
-        return Err(io::Error::other("No files matches the provided path argument"));
+        return Err(CommandError::IoError(
+            "No files matches the provided path argument".to_string(),
+        ));
     }
     Ok(parsed_paths)
 }
 
-fn read_tag(path: &PathBuf) -> Result<Tag, io::Error> {
+fn read_tag(path: &PathBuf) -> Result<Tag, CommandError> {
     match Tag::read_from_path(path) {
         Ok(tag) => Ok(tag),
-        Err(Error {
+        Err(id3::Error {
             kind: ErrorKind::NoTag,
             ..
         }) => Ok(Tag::new()),
         Err(err) => {
-            return Err(io::Error::other(err.description));
+            return Err(CommandError::IoError(err.description));
         }
-}}
+    }
+}

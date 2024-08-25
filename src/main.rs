@@ -1,10 +1,9 @@
 use std::error::Error;
-
 use audiobook_tagger::{number_chapters, number_files, show_tags};
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
-fn main() -> Result<(), Box<dyn Error>>{
-    let matches = cli();
+fn main() -> Result<(), Box<dyn Error>> {
+    let matches: ArgMatches = cli();
 
     if let Some((subcommand, args)) = matches.subcommand() {
         match subcommand {
