@@ -1,0 +1,82 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'audiobook_tagger'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=audiobook_tagger"
+                ],
+                "filter": {
+                    "name": "audiobook_tagger",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'audiobook_tagger'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=audiobook_tagger",
+                    "--package=audiobook_tagger"
+                ],
+                "filter": {
+                    "name": "audiobook_tagger",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'audiobook_tagger'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=audiobook_tagger",
+                    "--package=audiobook_tagger"
+                ],
+                "filter": {
+                    "name": "audiobook_tagger",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'audiobook_tagger with arguments'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=audiobook_tagger",
+                    "--package=audiobook_tagger"
+                ],
+                "filter": {
+                    "name": "audiobook_tagger",
+                    "kind": "bin"
+                }
+            },
+            "args": ["change-title", "A Title", "test_audiobook/*"],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

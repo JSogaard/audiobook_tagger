@@ -7,10 +7,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CommandError {
-    #[error("An error occured while reading or writing to file")]
+    #[error("An error occured while reading or writing to file: {0}")]
     IoError(String),
-    #[error("The pattern did not contain the correct format specifier(s)")]
-    NoFormatSpecifierError,
+    #[error("The pattern did not contain the correct format specifier: {0}")]
+    NoFormatSpecifierError(String),
 }
 
 pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
@@ -64,18 +64,45 @@ pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), CommandE
 }
 
 pub fn number_chapters(
-    naming_scheme: &String,
+    naming_scheme: &str,
     paths: ValuesRef<String>,
     start: i32,
 ) -> Result<(), CommandError> {
     if !naming_scheme.contains("%n") {
-        return Err(CommandError::NoFormatSpecifierError);
+        return Err(CommandError::NoFormatSpecifierError("%n".to_string()));
     }
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
         let chapter_name = naming_scheme.replace("%n", &i.to_string());
         write_frame(path, "TIT2", &chapter_name)?;
+    }
+    Ok(())
+}
+
+pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+
+    for path in &paths {
+        write_frame(path, "TIT2", title)?;
+    }
+    Ok(())
+}
+
+pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+
+    for path in &paths {
+        write_frame(path, "TPE1", author)?;
+    }
+    Ok(())
+}
+
+pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+
+    for path in &paths {
+        write_frame(path, "TCOM", narrator)?;
     }
     Ok(())
 }

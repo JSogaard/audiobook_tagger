@@ -1,8 +1,10 @@
-use std::error::Error;
-use audiobook_tagger::{number_chapters, number_files, show_tags};
+use anyhow::Result;
+use audiobook_tagger::{
+    change_author, change_narrator, change_title, number_chapters, number_files, show_tags,
+};
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let matches: ArgMatches = cli();
 
     if let Some((subcommand, args)) = matches.subcommand() {
@@ -18,6 +20,21 @@ fn main() -> Result<(), Box<dyn Error>> {
                 let paths: ValuesRef<String> = args.get_many("paths").unwrap();
                 let start: &i32 = args.get_one("start").unwrap();
                 number_chapters(naming_scheme, paths, *start)?;
+            }
+            "change-title" => {
+                let title: &String = args.get_one("title").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                change_title(title, paths)?;
+            }
+            "change-author" => {
+                let author: &String = args.get_one("author").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                change_author(author, paths)?;
+            }
+            "change-narrator" => {
+                let narrator: &String = args.get_one("narrator").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                change_narrator(narrator, paths)?;
             }
             _ => {}
         }
