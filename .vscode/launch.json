@@ -75,7 +75,7 @@
                     "kind": "bin"
                 }
             },
-            "args": ["combine-files", "test_audiobook/*"],
+            "args": ["combine-files", "test_audiobook/*", "-o", "test_audiobook/output.m4b"],
             "cwd": "${workspaceFolder}"
         },
     ]

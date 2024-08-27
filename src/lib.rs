@@ -2,7 +2,7 @@ use clap::parser::ValuesRef;
 use glob::glob;
 use id3::{Content, ErrorKind, Frame, Tag, TagLike, Version};
 use prettytable::{row, Table};
-use std::{collections::BTreeSet, io::Write, path::PathBuf};
+use std::{collections::BTreeSet, io::Write, path::PathBuf, process::Command};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
@@ -10,14 +10,24 @@ use thiserror::Error;
 pub enum CommandError {
     #[error("An error occured while reading or writing to file: {0}")]
     IoError(#[from] std::io::Error),
+
     #[error("An error occured while reading or writing to an id3-tag: {0}")]
     Id3Error(#[from] id3::Error),
+
     #[error("No files matched the provided pattern")]
     NoFilesFountError,
+
     #[error("An error occured while parsing path wild cards: {0}")]
     GlobError(#[from] glob::PatternError),
+
     #[error("The pattern did not contain the correct format specifier: {0}")]
     NoFormatSpecifierError(String),
+
+    #[error("The duration tag could not be read from the following file: {0}")]
+    NoDurationTagError(String),
+
+    #[error("ffmpeg encountered an error: {0}")]
+    FfmpegError(i32),
 }
 
 pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
@@ -82,7 +92,7 @@ pub fn number_chapters(
 
     for (path, i) in paths.iter().zip(start..) {
         let chapter_name = naming_scheme.replace("%n", &i.to_string());
-        write_frame(path, "TIT2", &chapter_name)?;
+        write_tag(path, "TIT2", &chapter_name)?;
     }
     Ok(())
 }
@@ -91,7 +101,7 @@ pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), Command
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
-        write_frame(path, "TIT2", title)?;
+        write_tag(path, "TIT2", title)?;
     }
     Ok(())
 }
@@ -100,7 +110,7 @@ pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), Comma
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
-        write_frame(path, "TPE1", author)?;
+        write_tag(path, "TPE1", author)?;
     }
     Ok(())
 }
@@ -109,7 +119,7 @@ pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), C
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
-        write_frame(path, "TCOM", narrator)?;
+        write_tag(path, "TCOM", narrator)?;
     }
     Ok(())
 }
@@ -122,7 +132,7 @@ pub fn change_tag(
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
-        write_frame(path, frame_id, new_text)?;
+        write_tag(path, frame_id, new_text)?;
     }
     Ok(())
 }
@@ -140,31 +150,82 @@ pub fn combine_files(
         .map(|path| format!("file '{}'", path.to_str().unwrap()))
         .collect::<Vec<String>>()
         .join("\n");
-    let mut file_tmp = NamedTempFile::new()?;
-    file_tmp.write_all(file_tmp_buf.as_bytes())?;
+    let mut files_tmp = NamedTempFile::new()?;
+    files_tmp.write_all(file_tmp_buf.as_bytes())?;
 
-    Ok(())
+    let mut ffmetadata_tmp = NamedTempFile::new()?;
+    let ffmetadata: String = generate_metadata(&paths, title, author)?;
+    ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
+
+    let bitrate = format!("{bitrate}k");
+
+    let arguments: Vec<&str> = vec![
+        "-v",
+        "info",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        files_tmp.path().to_str().unwrap(),
+        "-i",
+        ffmetadata_tmp.path().to_str().unwrap(),
+        "-map_metadata",
+        "1",
+        "-c:a",
+        "aac",
+        "-b:a",
+        &bitrate,
+        output,
+    ];
+    let status = Command::new("ffmpeg").args(arguments).status()?;
+    match status.code() {
+        Some(0) => Ok(()),
+        Some(code) => Err(CommandError::FfmpegError(code)),
+        None => Err(CommandError::FfmpegError(1)),
+    }
 }
 
-pub fn generate_metadata(paths: BTreeSet<PathBuf>, title: &str, author: &str) {
-    let mut ffmetadata = format!("
+pub fn generate_metadata(
+    paths: &BTreeSet<PathBuf>,
+    title: &str,
+    author: &str,
+) -> Result<String, CommandError> {
+    let mut ffmetadata: String = format!(
+        "
 ;FFMETADATA
 title={title}
 artist={author}
 genre=AudioBook
-");
-    
+"
+    );
+    let mut playhead: u32 = 0;
 
-}
+    for path in paths {
+        let tag = read_tag(path)?;
+        let chapter_title = tag.title().unwrap_or("Chapter");
+        let duration = match tag.duration() { // TODO Find duration using Rodio
+            Some(duration) => duration,
+            None => {
+                return Err(CommandError::NoDurationTagError(
+                    path.to_str().unwrap().to_string(),
+                ))
+            }
+        };
+        let start = playhead;
+        let end = playhead + duration;
 
-fn write_frame(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), CommandError> {
-    let mut tag: Tag = read_tag(&path)?;
-    let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
-    tag.add_frame(frame);
-    if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
-        return Err(CommandError::Id3Error(err));
+        ffmetadata.push_str(&format!(
+            "
+[CHAPTER]
+TIMEBASE=1/1000
+START={start}
+END={end}
+title={chapter_title}"
+        ));
+        playhead = end;
     }
-    Ok(())
+    Ok(ffmetadata)
 }
 
 fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, CommandError> {
@@ -184,6 +245,16 @@ fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, C
         return Err(CommandError::NoFilesFountError);
     }
     Ok(parsed_paths)
+}
+
+fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), CommandError> {
+    let mut tag: Tag = read_tag(&path)?;
+    let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
+    tag.add_frame(frame);
+    if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
+        return Err(CommandError::Id3Error(err));
+    }
+    Ok(())
 }
 
 fn read_tag(path: &PathBuf) -> Result<Tag, CommandError> {
