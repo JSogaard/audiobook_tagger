@@ -27,7 +27,7 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
         b->"Track",
     ]);
 
-    for path in paths {
+    for path in &paths {
         let tag = Tag::read_from_path(&path).unwrap_or(Tag::new());
         let file_name: &str = path.file_name().unwrap().to_str().unwrap();
         let composer: &str = match tag.get("TCOM") {
@@ -103,6 +103,19 @@ pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), C
 
     for path in &paths {
         write_frame(path, "TCOM", narrator)?;
+    }
+    Ok(())
+}
+
+pub fn change_tag(
+    frame_id: &str,
+    new_text: &str,
+    paths: ValuesRef<String>,
+) -> Result<(), CommandError> {
+    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+
+    for path in &paths {
+        write_frame(path, frame_id, new_text)?;
     }
     Ok(())
 }

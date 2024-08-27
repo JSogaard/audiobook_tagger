@@ -1,6 +1,6 @@
 use anyhow::Result;
 use audiobook_tagger::{
-    change_author, change_narrator, change_title, number_chapters, number_files, show_tags,
+    change_author, change_narrator, change_tag, change_title, number_chapters, number_files, show_tags
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -35,6 +35,12 @@ fn main() -> Result<()> {
                 let narrator: &String = args.get_one("narrator").unwrap();
                 let paths: ValuesRef<String> = args.get_many("paths").unwrap();
                 change_narrator(narrator, paths)?;
+            }
+            "change-tag" => {
+                let frame_id: &String = args.get_one("tag").unwrap();
+                let new_text: &String = args.get_one("value").unwrap();
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                change_tag(frame_id, new_text, paths)?;
             }
             _ => {}
         }
@@ -174,6 +180,18 @@ fn cli() -> ArgMatches {
                 .short('b')
                 .default_value("64")
                 .value_parser(value_parser!(u32))
+            )
+            .arg(
+                Arg::new("title")
+                .long("title")
+                .short('t')
+                .default_value("Unknown title")
+            )
+            .arg(
+                Arg::new("author")
+                .long("author")
+                .short('a')
+                .default_value("Unknown author")
             )
         )
     .get_matches();
