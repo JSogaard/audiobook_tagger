@@ -2,13 +2,20 @@ use clap::parser::ValuesRef;
 use glob::glob;
 use id3::{Content, ErrorKind, Frame, Tag, TagLike, Version};
 use prettytable::{row, Table};
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{collections::BTreeSet, io::Write, path::PathBuf};
+use tempfile::NamedTempFile;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum CommandError {
     #[error("An error occured while reading or writing to file: {0}")]
-    IoError(String),
+    IoError(#[from] std::io::Error),
+    #[error("An error occured while reading or writing to an id3-tag: {0}")]
+    Id3Error(#[from] id3::Error),
+    #[error("No files matched the provided pattern")]
+    NoFilesFountError,
+    #[error("An error occured while parsing path wild cards: {0}")]
+    GlobError(#[from] glob::PatternError),
     #[error("The pattern did not contain the correct format specifier: {0}")]
     NoFormatSpecifierError(String),
 }
@@ -57,7 +64,7 @@ pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), CommandE
         let mut tag: Tag = read_tag(path)?;
         tag.set_track(i);
         if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
-            return Err(CommandError::IoError(err.description));
+            return Err(CommandError::Id3Error(err));
         }
     }
     Ok(())
@@ -120,12 +127,42 @@ pub fn change_tag(
     Ok(())
 }
 
+pub fn combine_files(
+    paths: ValuesRef<String>,
+    output: &str,
+    bitrate: u32,
+    title: &str,
+    author: &str,
+) -> Result<(), CommandError> {
+    let paths = expand_wildcards(paths)?;
+    let file_tmp_buf: String = paths
+        .iter()
+        .map(|path| format!("file '{}'", path.to_str().unwrap()))
+        .collect::<Vec<String>>()
+        .join("\n");
+    let mut file_tmp = NamedTempFile::new()?;
+    file_tmp.write_all(file_tmp_buf.as_bytes())?;
+
+    Ok(())
+}
+
+pub fn generate_metadata(paths: BTreeSet<PathBuf>, title: &str, author: &str) {
+    let mut ffmetadata = format!("
+;FFMETADATA
+title={title}
+artist={author}
+genre=AudioBook
+");
+    
+
+}
+
 fn write_frame(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), CommandError> {
     let mut tag: Tag = read_tag(&path)?;
     let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
     tag.add_frame(frame);
     if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
-        return Err(CommandError::IoError(err.description));
+        return Err(CommandError::Id3Error(err));
     }
     Ok(())
 }
@@ -140,13 +177,11 @@ fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, C
                     parsed_paths.insert(glob_path.unwrap());
                 }
             }
-            Err(glob_error) => return Err(CommandError::IoError(glob_error.msg.to_string())),
+            Err(glob_error) => return Err(CommandError::GlobError(glob_error)),
         }
     }
     if parsed_paths.len() == 0 {
-        return Err(CommandError::IoError(
-            "No files matches the provided path argument".to_string(),
-        ));
+        return Err(CommandError::NoFilesFountError);
     }
     Ok(parsed_paths)
 }
@@ -159,7 +194,7 @@ fn read_tag(path: &PathBuf) -> Result<Tag, CommandError> {
             ..
         }) => Ok(Tag::new()),
         Err(err) => {
-            return Err(CommandError::IoError(err.description));
+            return Err(CommandError::Id3Error(err));
         }
     }
 }

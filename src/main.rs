@@ -1,6 +1,6 @@
 use anyhow::Result;
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, number_chapters, number_files, show_tags
+    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_tags
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -41,6 +41,14 @@ fn main() -> Result<()> {
                 let new_text: &String = args.get_one("value").unwrap();
                 let paths: ValuesRef<String> = args.get_many("paths").unwrap();
                 change_tag(frame_id, new_text, paths)?;
+            }
+            "combine-files" => {
+                let paths: ValuesRef<String> = args.get_many("paths").unwrap();
+                let output: &String = args.get_one("output").unwrap();
+                let bitrate: &u32 = args.get_one("bitrate").unwrap();
+                let title: &String = args.get_one("title").unwrap();
+                let author: &String = args.get_one("author").unwrap();
+                combine_files(paths, output, *bitrate, title, author)?;
             }
             _ => {}
         }
