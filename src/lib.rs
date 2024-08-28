@@ -1,6 +1,7 @@
 use clap::parser::ValuesRef;
 use glob::glob;
 use id3::{Content, ErrorKind, Frame, Tag, TagLike, Version};
+use mp3_duration::MP3DurationError;
 use prettytable::{row, Table};
 use std::{collections::BTreeSet, io::Write, path::PathBuf, process::Command};
 use tempfile::NamedTempFile;
@@ -23,8 +24,8 @@ pub enum CommandError {
     #[error("The pattern did not contain the correct format specifier: {0}")]
     NoFormatSpecifierError(String),
 
-    #[error("The duration tag could not be read from the following file: {0}")]
-    NoDurationTagError(String),
+    #[error("An error occured while reading MP3 file duration: {0}")]
+    NoDurationError(#[from] MP3DurationError),
 
     #[error("ffmpeg encountered an error: {0}")]
     FfmpegError(i32),
@@ -46,10 +47,21 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
 
     for path in &paths {
         let tag = Tag::read_from_path(&path).unwrap_or(Tag::new());
-        let file_name: &str = path.file_name().unwrap().to_str().unwrap();
+        let file_name: &str = match path.file_name() {
+            Some(file_name) => file_name.to_str().unwrap(),
+            None => return Err(CommandError::NoFilesFountError),
+        };
         let composer: &str = match tag.get("TCOM") {
             Some(frame) => frame.content().text().unwrap(),
             None => "",
+        };
+        let disc: String = match tag.disc() {
+            Some(disc) => disc.to_string(),
+            None => "".to_string(),
+        };
+        let track: String = match tag.track() {
+            Some(track) => track.to_string(),
+            None => "".to_string(),
         };
 
         table.add_row(row![
@@ -59,8 +71,8 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
             tag.artist().unwrap_or(""),
             tag.album_artist().unwrap_or(""),
             composer,
-            tag.disc().unwrap_or(0u32),
-            tag.track().unwrap_or(0u32),
+            disc,
+            track,
         ]);
     }
     table.printstd();
@@ -160,8 +172,8 @@ pub fn combine_files(
     let bitrate = format!("{bitrate}k");
 
     let arguments: Vec<&str> = vec![
-        "-v",
-        "info",
+        // "-v",
+        // "info",
         "-f",
         "concat",
         "-safe",
@@ -180,7 +192,10 @@ pub fn combine_files(
     ];
     let status = Command::new("ffmpeg").args(arguments).status()?;
     match status.code() {
-        Some(0) => Ok(()),
+        Some(0) => {
+            println!("Finished");
+            Ok(())
+        }
         Some(code) => Err(CommandError::FfmpegError(code)),
         None => Err(CommandError::FfmpegError(1)),
     }
@@ -192,8 +207,7 @@ pub fn generate_metadata(
     author: &str,
 ) -> Result<String, CommandError> {
     let mut ffmetadata: String = format!(
-        "
-;FFMETADATA
+        ";FFMETADATA
 title={title}
 artist={author}
 genre=AudioBook
@@ -204,14 +218,7 @@ genre=AudioBook
     for path in paths {
         let tag = read_tag(path)?;
         let chapter_title = tag.title().unwrap_or("Chapter");
-        let duration = match tag.duration() { // TODO Find duration using Rodio
-            Some(duration) => duration,
-            None => {
-                return Err(CommandError::NoDurationTagError(
-                    path.to_str().unwrap().to_string(),
-                ))
-            }
-        };
+        let duration = mp3_duration::from_path(path)?.as_millis() as u32;
         let start = playhead;
         let end = playhead + duration;
 
@@ -221,7 +228,8 @@ genre=AudioBook
 TIMEBASE=1/1000
 START={start}
 END={end}
-title={chapter_title}"
+title={chapter_title}
+"
         ));
         playhead = end;
     }
@@ -235,13 +243,13 @@ fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, C
         match glob(&raw_path) {
             Ok(globs) => {
                 for glob_path in globs {
-                    parsed_paths.insert(glob_path.unwrap());
+                    parsed_paths.insert(glob_path.unwrap().canonicalize()?);
                 }
             }
             Err(glob_error) => return Err(CommandError::GlobError(glob_error)),
         }
     }
-    if parsed_paths.len() == 0 {
+    if parsed_paths.is_empty() {
         return Err(CommandError::NoFilesFountError);
     }
     Ok(parsed_paths)
