@@ -1,6 +1,7 @@
 use anyhow::Result;
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_tags
+    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters,
+    number_files, show_tags,
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -58,6 +59,7 @@ fn main() -> Result<()> {
 
 fn cli() -> ArgMatches {
     let matches = command!().subcommand_required(true)
+    .about("Tool to prepare audiobook files by changing metadata and combining multiple mp3 files into one m4b")
         .subcommand(
             Command::new("show-tags")
             .about("Show common ID3 tags from files.")

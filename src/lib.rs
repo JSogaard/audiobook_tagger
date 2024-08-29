@@ -1,6 +1,10 @@
+pub mod chapters;
+pub mod helper;
+
+use chapters::ChapterList;
 use clap::parser::ValuesRef;
-use glob::glob;
-use id3::{Content, ErrorKind, Frame, Tag, TagLike, Version};
+use helper::*;
+use id3::{Tag, TagLike};
 use mp3_duration::MP3DurationError;
 use prettytable::{row, Table};
 use std::{collections::BTreeSet, io::Write, path::PathBuf, process::Command};
@@ -8,7 +12,7 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum CommandError {
+pub enum Error {
     #[error("An error occured while reading or writing to file: {0}")]
     IoError(#[from] std::io::Error),
 
@@ -31,8 +35,8 @@ pub enum CommandError {
     FfmpegError(i32),
 }
 
-pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
-    let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
+pub fn show_tags(paths: ValuesRef<String>) -> Result<(), Error> {
+    let paths: BTreeSet<PathBuf> = helper::expand_wildcards(paths)?;
     let mut table = Table::new();
     table.add_row(row![
         b->"File",
@@ -49,7 +53,7 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
         let tag = Tag::read_from_path(&path).unwrap_or(Tag::new());
         let file_name: &str = match path.file_name() {
             Some(file_name) => file_name.to_str().unwrap(),
-            None => return Err(CommandError::NoFilesFountError),
+            None => return Err(Error::NoFilesFountError),
         };
         let composer: &str = match tag.get("TCOM") {
             Some(frame) => frame.content().text().unwrap(),
@@ -79,14 +83,14 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), CommandError> {
     Ok(())
 }
 
-pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), CommandError> {
+pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), Error> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
         let mut tag: Tag = read_tag(path)?;
         tag.set_track(i);
         if let Err(err) = tag.write_to_path(path, id3::Version::Id3v23) {
-            return Err(CommandError::Id3Error(err));
+            return Err(Error::Id3Error(err));
         }
     }
     Ok(())
@@ -96,9 +100,9 @@ pub fn number_chapters(
     naming_scheme: &str,
     paths: ValuesRef<String>,
     start: i32,
-) -> Result<(), CommandError> {
+) -> Result<(), Error> {
     if !naming_scheme.contains("%n") {
-        return Err(CommandError::NoFormatSpecifierError("%n".to_string()));
+        return Err(Error::NoFormatSpecifierError("%n".to_string()));
     }
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
@@ -109,7 +113,7 @@ pub fn number_chapters(
     Ok(())
 }
 
-pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), Error> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -118,7 +122,7 @@ pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), Command
     Ok(())
 }
 
-pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), Error> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -127,7 +131,7 @@ pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), Comma
     Ok(())
 }
 
-pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), CommandError> {
+pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), Error> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -136,11 +140,7 @@ pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), C
     Ok(())
 }
 
-pub fn change_tag(
-    frame_id: &str,
-    new_text: &str,
-    paths: ValuesRef<String>,
-) -> Result<(), CommandError> {
+pub fn change_tag(frame_id: &str, new_text: &str, paths: ValuesRef<String>) -> Result<(), Error> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -155,7 +155,7 @@ pub fn combine_files(
     bitrate: u32,
     title: &str,
     author: &str,
-) -> Result<(), CommandError> {
+) -> Result<(), Error> {
     let paths = expand_wildcards(paths)?;
     let file_tmp_buf: String = paths
         .iter()
@@ -166,7 +166,10 @@ pub fn combine_files(
     files_tmp.write_all(file_tmp_buf.as_bytes())?;
 
     let mut ffmetadata_tmp = NamedTempFile::new()?;
-    let ffmetadata: String = generate_metadata(&paths, title, author)?;
+    // let ffmetadata: String = generate_metadata(&paths, title, author)?;
+    let chapter_list =
+        ChapterList::from_path_set(paths.iter(), title.to_string(), author.to_string())?;
+    let ffmetadata = chapter_list.ffmetadata();
     ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
 
     let bitrate = format!("{bitrate}k");
@@ -196,84 +199,7 @@ pub fn combine_files(
             println!("Finished");
             Ok(())
         }
-        Some(code) => Err(CommandError::FfmpegError(code)),
-        None => Err(CommandError::FfmpegError(1)),
-    }
-}
-
-pub fn generate_metadata(
-    paths: &BTreeSet<PathBuf>,
-    title: &str,
-    author: &str,
-) -> Result<String, CommandError> {
-    let mut ffmetadata: String = format!(
-        ";FFMETADATA
-title={title}
-artist={author}
-genre=AudioBook
-"
-    );
-    let mut playhead: u32 = 0;
-
-    for path in paths {
-        let tag = read_tag(path)?;
-        let chapter_title = tag.title().unwrap_or("Chapter");
-        let duration = mp3_duration::from_path(path)?.as_millis() as u32;
-        let start = playhead;
-        let end = playhead + duration;
-
-        ffmetadata.push_str(&format!(
-            "
-[CHAPTER]
-TIMEBASE=1/1000
-START={start}
-END={end}
-title={chapter_title}
-"
-        ));
-        playhead = end;
-    }
-    Ok(ffmetadata)
-}
-
-fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, CommandError> {
-    let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
-
-    for raw_path in raw_paths {
-        match glob(&raw_path) {
-            Ok(globs) => {
-                for glob_path in globs {
-                    parsed_paths.insert(glob_path.unwrap().canonicalize()?);
-                }
-            }
-            Err(glob_error) => return Err(CommandError::GlobError(glob_error)),
-        }
-    }
-    if parsed_paths.is_empty() {
-        return Err(CommandError::NoFilesFountError);
-    }
-    Ok(parsed_paths)
-}
-
-fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), CommandError> {
-    let mut tag: Tag = read_tag(&path)?;
-    let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
-    tag.add_frame(frame);
-    if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
-        return Err(CommandError::Id3Error(err));
-    }
-    Ok(())
-}
-
-fn read_tag(path: &PathBuf) -> Result<Tag, CommandError> {
-    match Tag::read_from_path(path) {
-        Ok(tag) => Ok(tag),
-        Err(id3::Error {
-            kind: ErrorKind::NoTag,
-            ..
-        }) => Ok(Tag::new()),
-        Err(err) => {
-            return Err(CommandError::Id3Error(err));
-        }
+        Some(code) => Err(Error::FfmpegError(code)),
+        None => Err(Error::FfmpegError(1)),
     }
 }
