@@ -179,7 +179,7 @@ fn cli() -> ArgMatches {
                 Arg::new("output")
                 .long("output")
                 .short('o')
-                .default_value("./output.mp4")
+                .default_value("./output.m4b")
                 // .value_parser(value_parser!(PathBuf))
             )
             .arg(
