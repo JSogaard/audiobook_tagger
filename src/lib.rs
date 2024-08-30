@@ -7,7 +7,12 @@ use helper::*;
 use id3::{Tag, TagLike};
 use mp3_duration::MP3DurationError;
 use prettytable::{row, Table};
-use std::{collections::BTreeSet, io::Write, path::PathBuf, process::Command};
+use std::{
+    collections::BTreeSet,
+    io::{self, Write},
+    path::PathBuf,
+    process::Command,
+};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
@@ -33,6 +38,9 @@ pub enum Error {
 
     #[error("ffmpeg encountered an error: {0}")]
     FfmpegError(i32),
+
+    #[error("Could not find ffmpeg executable: {0}")]
+    FfmpegNotFoundError(String),
 }
 
 pub fn show_tags(paths: ValuesRef<String>) -> Result<(), Error> {
@@ -155,6 +163,7 @@ pub fn combine_files(
     bitrate: u32,
     title: &str,
     author: &str,
+    ffmpeg_path: &str,
 ) -> Result<(), Error> {
     let paths = expand_wildcards(paths)?;
     let file_tmp_buf: String = paths
@@ -175,8 +184,6 @@ pub fn combine_files(
     let bitrate = format!("{bitrate}k");
 
     let arguments: Vec<&str> = vec![
-        // "-v",
-        // "info",
         "-f",
         "concat",
         "-safe",
@@ -193,7 +200,13 @@ pub fn combine_files(
         &bitrate,
         output,
     ];
-    let status = Command::new("ffmpeg").args(arguments).status()?;
+    let status = match Command::new(ffmpeg_path).args(arguments).status() {
+        Ok(status) => status,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            return Err(Error::FfmpegNotFoundError(ffmpeg_path.to_string()))
+        }
+        Err(err) => return Err(Error::IoError(err)),
+    };
     match status.code() {
         Some(0) => {
             println!("Finished");

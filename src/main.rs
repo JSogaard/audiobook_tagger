@@ -49,7 +49,8 @@ fn main() -> Result<()> {
                 let bitrate: &u32 = args.get_one("bitrate").unwrap();
                 let title: &String = args.get_one("title").unwrap();
                 let author: &String = args.get_one("author").unwrap();
-                combine_files(paths, output, *bitrate, title, author)?;
+                let ffmpeg_path: &String = args.get_one("ffmpeg-path").unwrap();
+                combine_files(paths, output, *bitrate, title, author, ffmpeg_path)?;
             }
             _ => {}
         }
@@ -202,6 +203,12 @@ fn cli() -> ArgMatches {
                 .long("author")
                 .short('a')
                 .default_value("Unknown author")
+            )
+            .arg(
+                Arg::new("ffmpeg-path")
+                .long("with-ffmpeg")
+                .short('w')
+                .default_value("ffmpeg")
             )
         )
     .get_matches();
