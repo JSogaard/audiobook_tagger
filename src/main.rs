@@ -1,7 +1,6 @@
 use anyhow::Result;
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters,
-    number_files, show_tags,
+    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_chapters, show_tags
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -16,7 +15,7 @@ fn main() -> Result<()> {
                 let start: &u32 = args.get_one::<u32>("start").unwrap();
                 number_files(paths, *start)?;
             }
-            "number-chapters" => {
+            "number-file-titles" => {
                 let naming_scheme: &String = args.get_one("naming-scheme").unwrap();
                 let paths: ValuesRef<String> = args.get_many("paths").unwrap();
                 let start: &i32 = args.get_one("start").unwrap();
@@ -51,6 +50,10 @@ fn main() -> Result<()> {
                 let author: &String = args.get_one("author").unwrap();
                 let ffmpeg_path: &String = args.get_one("ffmpeg-path").unwrap();
                 combine_files(paths, output, *bitrate, title, author, ffmpeg_path)?;
+            }
+            "show-chapters" => {
+                let path: &String = args.get_one("path").unwrap();
+                show_chapters(path)?;
             }
             _ => {}
         }
@@ -89,7 +92,7 @@ fn cli() -> ArgMatches {
             )
         )
         .subcommand(
-            Command::new("number-chapters")
+            Command::new("number-file-titles")
             .about("Update the title tag of each file with a name based on a naming scheme, replacing '%n' with a sequential number, starting from specified value.")
             .arg(
                 Arg::new("naming-scheme")
@@ -209,6 +212,14 @@ fn cli() -> ArgMatches {
                 .long("with-ffmpeg")
                 .short('w')
                 .default_value("ffmpeg")
+            )
+        )
+        .subcommand(
+            Command::new("show-chapters")
+            .about("Show the embedded chapters in an audiobook file (e.g. m4b or mp4)")
+            .arg(
+                Arg::new("path")
+                .required(true)
             )
         )
     .get_matches();

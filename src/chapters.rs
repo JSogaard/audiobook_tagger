@@ -1,8 +1,13 @@
 use crate::{read_tag, Error};
+use core::str;
 use id3::TagLike;
+use serde_json::Value;
 use std::{
+    io,
     ops::{Index, IndexMut},
-    path::PathBuf, slice::{Iter, IterMut},
+    path::PathBuf,
+    process::Command,
+    slice::{Iter, IterMut},
 };
 
 #[derive(Debug, Clone)]
@@ -99,6 +104,34 @@ impl ChapterList {
             author,
             chapters,
         })
+    }
+
+    pub fn from_chaptered_file(path: &str) -> Result<(), Error> {
+        let arguments = vec![
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_chapters",
+            path,
+        ];
+        let output = match Command::new("ffprobe").args(arguments).output() {
+            Ok(output) => output,
+            Err(err) if err.kind() == io::ErrorKind::NotFound => {
+                return Err(Error::FfprobeNotFoundError());
+            }
+            Err(err) => return Err(Error::IoError(err)),
+        };
+        let tag = read_tag(&PathBuf::from(path))?;
+        let title = tag.title().unwrap_or("Unknown title").to_string();
+        let author = tag.artist().unwrap_or("Unknown author").to_string();
+        let chapter_list = ChapterList::new(title, author);
+
+        let chapters_json: Value = serde_json::from_str(str::from_utf8(&output.stdout).unwrap())
+            .expect("Failed to parse chapters json");
+        for json_chapter in chapters_json.get("chapters").unwrap().as_array() {}
+        // TODO
+        Ok(())
     }
 
     pub fn ffmetadata(&self) -> String {

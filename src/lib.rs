@@ -41,6 +41,12 @@ pub enum Error {
 
     #[error("Could not find ffmpeg executable: {0}")]
     FfmpegNotFoundError(String),
+
+    #[error("Could not find ffprobe. It is automatically installed with ffmpeg")]
+    FfprobeNotFoundError(),
+
+    #[error("An error occured while reading the chapters of the audio file")]
+    ChapterReadError,
 }
 
 pub fn show_tags(paths: ValuesRef<String>) -> Result<(), Error> {
@@ -215,4 +221,8 @@ pub fn combine_files(
         Some(code) => Err(Error::FfmpegError(code)),
         None => Err(Error::FfmpegError(1)),
     }
+}
+
+pub fn show_chapters(path: &str) -> Result<(), Error> {
+    Ok(())
 }
