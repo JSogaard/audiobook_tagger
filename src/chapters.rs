@@ -2,7 +2,7 @@ use crate::{read_tag, Error};
 use id3::TagLike;
 use std::{
     ops::{Index, IndexMut},
-    path::PathBuf,
+    path::PathBuf, slice::{Iter, IterMut},
 };
 
 #[derive(Debug, Clone)]
@@ -114,6 +114,14 @@ genre=AudioBook
             ffmetadata.push_str(&chapter.ffmetadata());
         }
         ffmetadata
+    }
+
+    pub fn iter(&self) -> Iter<'_, Chapter> {
+        self.chapters.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'_, Chapter> {
+        self.chapters.iter_mut()
     }
 
     pub fn title(&self) -> String {
