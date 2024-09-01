@@ -49,10 +49,12 @@ pub enum Error {
     ChapterReadError,
 }
 
-pub fn show_tags(paths: ValuesRef<String>) -> Result<(), Error> {
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn show_tags(paths: ValuesRef<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = helper::expand_wildcards(paths)?;
     let mut table = Table::new();
-    table.add_row(row![
+    table.set_titles(row![
         b->"File",
         b->"Title",
         b->"Album",
@@ -97,7 +99,7 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<(), Error> {
+pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
@@ -114,7 +116,7 @@ pub fn number_chapters(
     naming_scheme: &str,
     paths: ValuesRef<String>,
     start: i32,
-) -> Result<(), Error> {
+) -> Result<()> {
     if !naming_scheme.contains("%n") {
         return Err(Error::NoFormatSpecifierError("%n".to_string()));
     }
@@ -127,7 +129,7 @@ pub fn number_chapters(
     Ok(())
 }
 
-pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), Error> {
+pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -136,7 +138,7 @@ pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<(), Error> 
     Ok(())
 }
 
-pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), Error> {
+pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -145,7 +147,7 @@ pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<(), Error
     Ok(())
 }
 
-pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), Error> {
+pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -154,7 +156,7 @@ pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<(), E
     Ok(())
 }
 
-pub fn change_tag(frame_id: &str, new_text: &str, paths: ValuesRef<String>) -> Result<(), Error> {
+pub fn change_tag(frame_id: &str, new_text: &str, paths: ValuesRef<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -170,7 +172,7 @@ pub fn combine_files(
     title: &str,
     author: &str,
     ffmpeg_path: &str,
-) -> Result<(), Error> {
+) -> Result<()> {
     let paths = expand_wildcards(paths)?;
     let file_tmp_buf: String = paths
         .iter()
@@ -183,7 +185,7 @@ pub fn combine_files(
     let mut ffmetadata_tmp = NamedTempFile::new()?;
     // let ffmetadata: String = generate_metadata(&paths, title, author)?;
     let chapter_list =
-        ChapterList::from_path_set(paths.iter(), title.to_string(), author.to_string())?;
+        ChapterList::from_path_set(paths, title.to_string(), author.to_string())?;
     let ffmetadata = chapter_list.ffmetadata();
     ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
 
@@ -223,6 +225,8 @@ pub fn combine_files(
     }
 }
 
-pub fn show_chapters(path: &str) -> Result<(), Error> {
+pub fn show_chapters(path: &str) -> Result<()> {
+    let chapter_list = ChapterList::from_chaptered_file(path)?;
+    println!("{}", chapter_list);
     Ok(())
 }

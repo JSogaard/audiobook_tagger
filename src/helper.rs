@@ -1,13 +1,13 @@
-use crate::Error;
+use crate::{Error, Result};
 use clap::parser::ValuesRef;
 use id3::{Content, Frame, Tag, TagLike, Version};
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{collections::BTreeSet, path::{Path, PathBuf}};
 
 // pub fn generate_metadata(
 //     paths: &BTreeSet<PathBuf>,
 //     title: &str,
 //     author: &str,
-// ) -> Result<String, Error> {
+// ) -> Result<String> {
 //     let mut ffmetadata: String = format!(
 //         ";FFMETADATA
 // title={title}
@@ -38,7 +38,7 @@ use std::{collections::BTreeSet, path::PathBuf};
 //     Ok(ffmetadata)
 // }
 
-pub fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>, Error> {
+pub fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>> {
     let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
     for raw_path in raw_paths {
@@ -57,7 +57,7 @@ pub fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf
     Ok(parsed_paths)
 }
 
-pub fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), Error> {
+pub fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<()> {
     let mut tag: Tag = read_tag(&path)?;
     let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
     tag.add_frame(frame);
@@ -67,7 +67,7 @@ pub fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<(), E
     Ok(())
 }
 
-pub fn read_tag(path: &PathBuf) -> Result<Tag, Error> {
+pub fn read_tag(path: impl AsRef<Path>) -> Result<Tag> {
     match Tag::read_from_path(path) {
         Ok(tag) => Ok(tag),
         Err(id3::Error {

@@ -1,6 +1,5 @@
-use anyhow::Result;
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_chapters, show_tags
+    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_chapters, show_tags, Result,
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 

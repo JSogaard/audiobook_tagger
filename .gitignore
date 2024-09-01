@@ -232,12 +232,4 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,rust,rust-analyzer,visualstudiocode,intellij
 test_audiobook/*
-.VSCodeCounter/2024-08-27_21-32-13/details.md
-.VSCodeCounter/2024-08-27_21-32-13/diff-details.md
-.VSCodeCounter/2024-08-27_21-32-13/diff.csv
-.VSCodeCounter/2024-08-27_21-32-13/diff.md
-.VSCodeCounter/2024-08-27_21-32-13/diff.txt
-.VSCodeCounter/2024-08-27_21-32-13/results.csv
-.VSCodeCounter/2024-08-27_21-32-13/results.json
-.VSCodeCounter/2024-08-27_21-32-13/results.md
-.VSCodeCounter/2024-08-27_21-32-13/results.txt
+.VSCodeCounter/*
