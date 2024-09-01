@@ -8,10 +8,7 @@ use id3::{Tag, TagLike};
 use mp3_duration::MP3DurationError;
 use prettytable::{row, Table};
 use std::{
-    collections::BTreeSet,
-    io::{self, Write},
-    path::PathBuf,
-    process::Command,
+    collections::BTreeSet, io::{self, Write}, path::PathBuf, process::Command
 };
 use tempfile::NamedTempFile;
 use thiserror::Error;
@@ -47,6 +44,9 @@ pub enum Error {
 
     #[error("An error occured while reading the chapters of the audio file")]
     ChapterReadError,
+
+    #[error("Failed to serialize chapters to json: {0}")]
+    JsonSerializationError(#[from] serde_json::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -228,5 +228,12 @@ pub fn combine_files(
 pub fn show_chapters(path: &str) -> Result<()> {
     let chapter_list = ChapterList::from_chaptered_file(path)?;
     println!("{}", chapter_list);
+    Ok(())
+}
+
+pub fn chapters_to_json(path: &str) -> Result<()> {
+    let chapter_json = ChapterList::from_chaptered_file(path)?.json()?;
+    println!("{}", &chapter_json);
+
     Ok(())
 }

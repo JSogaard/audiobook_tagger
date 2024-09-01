@@ -2,12 +2,18 @@ use crate::{read_tag, Error, Result};
 use core::str;
 use id3::TagLike;
 use prettytable::{row, Table};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
-    fmt::Display, io, ops::{Index, IndexMut}, path::{Path, PathBuf}, process::Command, slice::{Iter, IterMut}
+    fmt::Display,
+    io,
+    ops::{Index, IndexMut},
+    path::{Path, PathBuf},
+    process::Command,
+    slice::{Iter, IterMut},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chapter {
     title: String,
     start: u32,
@@ -61,7 +67,7 @@ title={}
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChapterList {
     title: String,
     author: String,
@@ -167,6 +173,10 @@ genre=AudioBook
         ffmetadata
     }
 
+    pub fn json(&self) -> Result<String> {
+        serde_json::to_string(self).map_err(|err| Error::JsonSerializationError(err))
+    }
+
     pub fn iter(&self) -> Iter<'_, Chapter> {
         self.chapters.iter()
     }
@@ -219,11 +229,7 @@ impl Display for ChapterList {
             b->"End (ms)",
         ]);
         for chapter in &self.chapters {
-            table.add_row(row![
-                chapter.title(),
-                chapter.start(),
-                chapter.end()
-            ]);
+            table.add_row(row![chapter.title(), chapter.start(), chapter.end()]);
         }
         write!(f, "{}", table.to_string())
     }
