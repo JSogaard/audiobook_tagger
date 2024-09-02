@@ -4,9 +4,10 @@ use id3::TagLike;
 use prettytable::{row, Table};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tempfile::NamedTempFile;
 use std::{
     fmt::Display,
-    io,
+    io::{self, Read, Write},
     ops::{Index, IndexMut},
     path::{Path, PathBuf},
     process::Command,
@@ -98,11 +99,7 @@ impl ChapterList {
             let start = playhead;
             let end = playhead + duration;
 
-            chapters.push(Chapter {
-                title: chapter_title,
-                start,
-                end,
-            });
+            chapters.push(Chapter::new(chapter_title, start, end));
 
             playhead = end;
         }
@@ -171,6 +168,39 @@ genre=AudioBook
             ffmetadata.push_str(&chapter.ffmetadata());
         }
         ffmetadata
+    }
+
+    pub fn from_json(json: &str) -> Result<Self> {
+        let chapter_list: ChapterList = serde_json::from_str(json)?;
+        Ok(chapter_list)
+    }
+
+    pub fn write_to_file(chapters_json: &str, input_path: &str, output_path: &str) -> Result<()> {
+        let output: &Path = output_path.as_ref();
+        let mut input = String::new();
+        io::stdin().read_to_string(&mut input)?;
+        let chapter_list = ChapterList::from_json(chapters_json)?;
+        let ffmetadata: String = chapter_list.ffmetadata();
+
+        let mut ffmetadata_tmp = NamedTempFile::new()?;
+        ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
+        let ffmetadata_tmp_path = ffmetadata_tmp.path().to_string_lossy();
+
+        let arguments = vec![
+            "-i",
+            input_path,
+            "-i",
+            &ffmetadata_tmp_path,
+            "-map",
+            "0",
+            "-map_metadata",
+            "1",
+            "-c",
+            "copy",
+            output_path,
+        ];
+
+        todo!();
     }
 
     pub fn json(&self) -> Result<String> {

@@ -1,5 +1,5 @@
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, combine_files, number_chapters, number_files, show_chapters, show_tags, chapters_to_json, Result
+    change_author, change_narrator, change_tag, change_title, chapters_to_json, combine_files, json_to_chapters, number_chapters, number_files, show_chapters, show_tags, Result
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -57,6 +57,10 @@ fn main() -> Result<()> {
             "chapters-to-json" => {
                 let path: &String = args.get_one("path").unwrap();
                 chapters_to_json(path)?;
+            }
+            "json-to-chapters" => {
+                let output: &String = args.get_one("output").unwrap();
+                json_to_chapters(output)?;
             }
             _ => {}
         }
@@ -231,6 +235,20 @@ fn cli() -> ArgMatches {
             .arg(
                 Arg::new("path")
                 .required(true)
+            )
+        )
+        .subcommand(
+            Command::new("json-to-chapters")
+            .about("Reads json with chapters from stdin and writes them to an audiobook file")
+            .arg(
+                Arg::new("path")
+                .required(true)
+            )
+            .arg(
+                Arg::new("output")
+                .long("output")
+                .short('o')
+                .default_value("chaptered.m4b")
             )
         )
     .get_matches();

@@ -45,8 +45,11 @@ pub enum Error {
     #[error("An error occured while reading the chapters of the audio file")]
     ChapterReadError,
 
-    #[error("Failed to serialize chapters to json: {0}")]
+    #[error("Failed read or write json data: {0}")]
     JsonSerializationError(#[from] serde_json::Error),
+
+    #[error("Filed to read from stdin")]
+    StdinError
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -68,7 +71,7 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<()> {
     for path in &paths {
         let tag = Tag::read_from_path(&path).unwrap_or(Tag::new());
         let file_name: &str = match path.file_name() {
-            Some(file_name) => file_name.to_str().unwrap(),
+            Some(file_name) => &file_name.to_string_lossy(),
             None => return Err(Error::NoFilesFountError),
         };
         let composer: &str = match tag.get("TCOM") {
@@ -176,11 +179,12 @@ pub fn combine_files(
     let paths = expand_wildcards(paths)?;
     let file_tmp_buf: String = paths
         .iter()
-        .map(|path| format!("file '{}'", path.to_str().unwrap()))
+        .map(|path| format!("file '{}'", path.to_string_lossy()))
         .collect::<Vec<String>>()
         .join("\n");
     let mut files_tmp = NamedTempFile::new()?;
     files_tmp.write_all(file_tmp_buf.as_bytes())?;
+    let files_tmp_path = files_tmp.path().to_string_lossy();
 
     let mut ffmetadata_tmp = NamedTempFile::new()?;
     // let ffmetadata: String = generate_metadata(&paths, title, author)?;
@@ -188,6 +192,8 @@ pub fn combine_files(
         ChapterList::from_path_set(paths, title.to_string(), author.to_string())?;
     let ffmetadata = chapter_list.ffmetadata();
     ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
+    let ffmetadata_tmp_path = ffmetadata_tmp.path().to_string_lossy();
+
 
     let bitrate = format!("{bitrate}k");
 
@@ -197,9 +203,9 @@ pub fn combine_files(
         "-safe",
         "0",
         "-i",
-        files_tmp.path().to_str().unwrap(),
+        &files_tmp_path,
         "-i",
-        ffmetadata_tmp.path().to_str().unwrap(),
+        &ffmetadata_tmp_path,
         "-map_metadata",
         "1",
         "-c:a",
@@ -208,6 +214,7 @@ pub fn combine_files(
         &bitrate,
         output,
     ];
+    // TODO Split ffmpeg calls into a helper function
     let status = match Command::new(ffmpeg_path).args(arguments).status() {
         Ok(status) => status,
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
@@ -236,4 +243,8 @@ pub fn chapters_to_json(path: &str) -> Result<()> {
     println!("{}", &chapter_json);
 
     Ok(())
+}
+
+pub fn json_to_chapters(output: &str) -> Result<()> {
+    todo!();
 }
