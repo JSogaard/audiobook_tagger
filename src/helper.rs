@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use clap::parser::ValuesRef;
 use id3::{Content, Frame, Tag, TagLike, Version};
-use std::{collections::BTreeSet, path::{Path, PathBuf}};
+use std::{collections::BTreeSet, io, path::{Path, PathBuf}, process::Command};
 
 // pub fn generate_metadata(
 //     paths: &BTreeSet<PathBuf>,
@@ -77,5 +77,23 @@ pub fn read_tag(path: impl AsRef<Path>) -> Result<Tag> {
         Err(err) => {
             return Err(Error::Id3Error(err));
         }
+    }
+}
+
+pub fn run_ffmpeg<'a>(ffmpeg_path: &str, arguments: impl IntoIterator<Item = &'a str>) -> Result<()> {
+    let status = match Command::new(ffmpeg_path).args(arguments).status() {
+        Ok(status) => status,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => {
+            return Err(Error::FfmpegNotFoundError(ffmpeg_path.to_string()))
+        }
+        Err(err) => return Err(Error::IoError(err)),
+    };
+    match status.code() {
+        Some(0) => {
+            println!("Finished");
+            Ok(())
+        }
+        Some(code) => Err(Error::FfmpegError(code)),
+        None => Err(Error::FfmpegError(1)),
     }
 }

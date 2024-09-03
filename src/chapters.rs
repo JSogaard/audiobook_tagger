@@ -1,4 +1,4 @@
-use crate::{read_tag, Error, Result};
+use crate::{read_tag, run_ffmpeg, Error, Result};
 use core::str;
 use id3::TagLike;
 use prettytable::{row, Table};
@@ -7,7 +7,7 @@ use serde_json::Value;
 use tempfile::NamedTempFile;
 use std::{
     fmt::Display,
-    io::{self, Read, Write},
+    io::{self, Write},
     ops::{Index, IndexMut},
     path::{Path, PathBuf},
     process::Command,
@@ -56,12 +56,12 @@ impl Chapter {
 
     pub fn ffmetadata(&self) -> String {
         format!(
-            "
-[CHAPTER]
-TIMEBASE=1/1000
-START={}
-END={}
-title={}
+            "\n\
+            [CHAPTER]\n\
+            TIMEBASE=1/1000\n\
+            START={}\n\
+            END={}\n\
+            title={}\n\
 ",
             self.start, self.end, self.title
         )
@@ -112,7 +112,7 @@ impl ChapterList {
 
     pub fn from_chaptered_file(path: &str) -> Result<ChapterList> {
         let path = path.as_ref();
-        let arguments = vec![
+        let arguments = [
             "-v",
             "quiet",
             "-print_format",
@@ -157,10 +157,10 @@ impl ChapterList {
 
     pub fn ffmetadata(&self) -> String {
         let mut ffmetadata = format!(
-            ";FFMETADATA
-title={}
-artist={}
-genre=AudioBook
+            ";FFMETADATA\n\
+            title={}\n\
+            artist={}\n\
+            genre=AudioBook\n\
 ",
             self.title, self.author
         );
@@ -170,23 +170,19 @@ genre=AudioBook
         ffmetadata
     }
 
-    pub fn from_json(json: &str) -> Result<Self> {
-        let chapter_list: ChapterList = serde_json::from_str(json)?;
+    pub fn from_toml(toml: &str) -> Result<Self> {
+        let chapter_list: ChapterList = toml::from_str(toml)?;
         Ok(chapter_list)
     }
 
-    pub fn write_to_file(chapters_json: &str, input_path: &str, output_path: &str) -> Result<()> {
-        let output: &Path = output_path.as_ref();
-        let mut input = String::new();
-        io::stdin().read_to_string(&mut input)?;
-        let chapter_list = ChapterList::from_json(chapters_json)?;
-        let ffmetadata: String = chapter_list.ffmetadata();
+    pub fn write_to_file(&self, input_path: &str, output_path: &str, ffmpeg_path: &str) -> Result<()> {
+        let ffmetadata: String = self.ffmetadata();
 
         let mut ffmetadata_tmp = NamedTempFile::new()?;
         ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
         let ffmetadata_tmp_path = ffmetadata_tmp.path().to_string_lossy();
 
-        let arguments = vec![
+        let arguments = [
             "-i",
             input_path,
             "-i",
@@ -199,12 +195,13 @@ genre=AudioBook
             "copy",
             output_path,
         ];
-
-        todo!();
+        run_ffmpeg(ffmpeg_path, arguments)?;
+        
+        Ok(())
     }
 
-    pub fn json(&self) -> Result<String> {
-        serde_json::to_string(self).map_err(|err| Error::JsonSerializationError(err))
+    pub fn toml(&self) -> Result<String> {
+        toml::to_string(self).map_err(|err| Error::TomlSerializationError(err))
     }
 
     pub fn iter(&self) -> Iter<'_, Chapter> {

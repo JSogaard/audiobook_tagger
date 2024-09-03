@@ -1,5 +1,5 @@
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, chapters_to_json, combine_files, json_to_chapters, number_chapters, number_files, show_chapters, show_tags, Result
+    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files, toml_to_chapters, number_chapters, number_files, show_chapters, show_tags, Result
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -54,13 +54,15 @@ fn main() -> Result<()> {
                 let path: &String = args.get_one("path").unwrap();
                 show_chapters(path)?;
             }
-            "chapters-to-json" => {
+            "chapters-to-toml" => {
                 let path: &String = args.get_one("path").unwrap();
-                chapters_to_json(path)?;
+                chapters_to_toml(path)?;
             }
-            "json-to-chapters" => {
+            "toml-to-chapters" => {
+                let path: &String = args.get_one("path").unwrap();
                 let output: &String = args.get_one("output").unwrap();
-                json_to_chapters(output)?;
+                let ffmpeg_path: &String = args.get_one("ffmpeg-path").unwrap();
+                toml_to_chapters(path, output, &ffmpeg_path)?;
             }
             _ => {}
         }
@@ -230,16 +232,16 @@ fn cli() -> ArgMatches {
             )
         )
         .subcommand(
-            Command::new("chapters-to-json")
-            .about("Reads embedded chapters from audiobook file and outputs them to stdout")
+            Command::new("chapters-to-toml")
+            .about("Reads embedded chapters from audiobook file and outputs them to stdout as TOML")
             .arg(
                 Arg::new("path")
                 .required(true)
             )
         )
         .subcommand(
-            Command::new("json-to-chapters")
-            .about("Reads json with chapters from stdin and writes them to an audiobook file")
+            Command::new("toml-to-chapters")
+            .about("Reads TOML with chapters from stdin and writes them to an audiobook file")
             .arg(
                 Arg::new("path")
                 .required(true)
@@ -249,6 +251,12 @@ fn cli() -> ArgMatches {
                 .long("output")
                 .short('o')
                 .default_value("chaptered.m4b")
+            )
+            .arg(
+                Arg::new("ffmpeg-path")
+                .long("with-ffmpeg")
+                .short('w')
+                .default_value("ffmpeg")
             )
         )
     .get_matches();
