@@ -4,7 +4,6 @@ use id3::TagLike;
 use prettytable::{row, Table};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tempfile::NamedTempFile;
 use std::{
     fmt::Display,
     io::{self, Write},
@@ -13,6 +12,7 @@ use std::{
     process::Command,
     slice::{Iter, IterMut},
 };
+use tempfile::NamedTempFile;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chapter {
@@ -175,7 +175,12 @@ impl ChapterList {
         Ok(chapter_list)
     }
 
-    pub fn write_to_file(&self, input_path: &str, output_path: &str, ffmpeg_path: &str) -> Result<()> {
+    pub fn write_to_file(
+        &self,
+        input_path: &str,
+        output_path: &str,
+        ffmpeg_path: &str,
+    ) -> Result<()> {
         let ffmetadata: String = self.ffmetadata();
 
         let mut ffmetadata_tmp = NamedTempFile::new()?;
@@ -187,16 +192,18 @@ impl ChapterList {
             input_path,
             "-i",
             &ffmetadata_tmp_path,
-            "-map",
-            "0",
+            // "-map",
+            // "0",
             "-map_metadata",
+            "1",
+            "-map_chapters",
             "1",
             "-c",
             "copy",
             output_path,
         ];
         run_ffmpeg(ffmpeg_path, arguments)?;
-        
+
         Ok(())
     }
 
@@ -218,6 +225,10 @@ impl ChapterList {
 
     pub fn author(&self) -> String {
         self.author.clone()
+    }
+
+    pub fn len(&self) -> usize {
+        self.chapters.len()
     }
 
     pub fn push(&mut self, new_chapter: Chapter) {

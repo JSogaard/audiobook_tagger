@@ -15,7 +15,7 @@ pub enum Error {
     #[error("An error occured while parsing path wild cards: {0}")]
     GlobError(#[from] glob::PatternError),
 
-    #[error("The pattern did not contain the correct format specifier: {0}")]
+    #[error("The format string did not contain this format specifier: {0}")]
     NoFormatSpecifierError(String),
 
     #[error("An error occured while reading MP3 file duration: {0}")]
@@ -38,7 +38,6 @@ pub enum Error {
 
     #[error("Failed read from TOML data: {0}")]
     TomlDeserializationError(#[from] toml::de::Error),
-
 
     #[error("Filed to read from stdin")]
     StdinError

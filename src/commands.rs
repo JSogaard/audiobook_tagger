@@ -1,11 +1,14 @@
-use chapters::ChapterList;
 use crate::errors::*;
+use chapters::ChapterList;
 use clap::parser::ValuesRef;
 use helper::*;
 use id3::{Tag, TagLike};
 use prettytable::{row, Table};
 use std::{
-    collections::BTreeSet, io::{self, Read, Write}, path::PathBuf
+    collections::BTreeSet,
+    fs::File,
+    io::{Read, Write},
+    path::PathBuf,
 };
 use tempfile::NamedTempFile;
 
@@ -72,11 +75,7 @@ pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<()> {
     Ok(())
 }
 
-pub fn number_chapters(
-    naming_scheme: &str,
-    paths: ValuesRef<String>,
-    start: i32,
-) -> Result<()> {
+pub fn number_chapters(naming_scheme: &str, paths: ValuesRef<String>, start: i32) -> Result<()> {
     if !naming_scheme.contains("%n") {
         return Err(Error::NoFormatSpecifierError("%n".to_string()));
     }
@@ -145,12 +144,10 @@ pub fn combine_files(
 
     let mut ffmetadata_tmp = NamedTempFile::new()?;
     // let ffmetadata: String = generate_metadata(&paths, title, author)?;
-    let chapter_list =
-        ChapterList::from_path_set(paths, title.to_string(), author.to_string())?;
+    let chapter_list = ChapterList::from_path_set(paths, title.to_string(), author.to_string())?;
     let ffmetadata = chapter_list.ffmetadata();
     ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
     let ffmetadata_tmp_path = ffmetadata_tmp.path().to_string_lossy();
-
 
     let bitrate = format!("{bitrate}k");
 
@@ -171,7 +168,6 @@ pub fn combine_files(
         &bitrate,
         output,
     ];
-    // TODO Split ffmpeg calls into a helper function
     run_ffmpeg(ffmpeg_path, arguments)
 }
 
@@ -182,17 +178,21 @@ pub fn show_chapters(path: &str) -> Result<()> {
 }
 
 pub fn chapters_to_toml(path: &str) -> Result<()> {
-    // TODO Switch to TOML
     let chapter_toml = ChapterList::from_chaptered_file(path)?.toml()?;
     print!("{}", &chapter_toml);
 
     Ok(())
 }
 
-pub fn toml_to_chapters(path: &str, output: &str, ffmpeg_path: &str) -> Result<()> {
-    let mut input = String::new();
-    io::stdin().read_to_string(&mut input)?;
-    ChapterList::from_toml(&input)?.write_to_file(path, output, ffmpeg_path)?;
+pub fn toml_to_chapters(
+    path: &str,
+    output: &str,
+    toml_path: &str,
+    ffmpeg_path: &str,
+) -> Result<()> {
+    let mut toml = String::new();
+    File::open(toml_path)?.read_to_string(&mut toml)?;
+    ChapterList::from_toml(&toml)?.write_to_file(path, output, ffmpeg_path)?;
 
     Ok(())
 }

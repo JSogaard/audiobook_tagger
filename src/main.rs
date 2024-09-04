@@ -1,9 +1,10 @@
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files, toml_to_chapters, number_chapters, number_files, show_chapters, show_tags, Result
+    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files,
+    number_chapters, number_files, show_chapters, show_tags, toml_to_chapters,
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let matches: ArgMatches = cli();
 
     if let Some((subcommand, args)) = matches.subcommand() {
@@ -60,9 +61,10 @@ fn main() -> Result<()> {
             }
             "toml-to-chapters" => {
                 let path: &String = args.get_one("path").unwrap();
+                let toml: &String = args.get_one("toml").unwrap();
                 let output: &String = args.get_one("output").unwrap();
                 let ffmpeg_path: &String = args.get_one("ffmpeg-path").unwrap();
-                toml_to_chapters(path, output, &ffmpeg_path)?;
+                toml_to_chapters(path, output, toml, &ffmpeg_path)?;
             }
             _ => {}
         }
@@ -241,9 +243,13 @@ fn cli() -> ArgMatches {
         )
         .subcommand(
             Command::new("toml-to-chapters")
-            .about("Reads TOML with chapters from stdin and writes them to an audiobook file")
+            .about("Reads TOML-file with chapters and writes them to an audiobook file")
             .arg(
                 Arg::new("path")
+                .required(true)
+            )
+            .arg(
+                Arg::new("toml")
                 .required(true)
             )
             .arg(
