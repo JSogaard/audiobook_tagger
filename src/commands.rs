@@ -196,3 +196,26 @@ pub fn toml_to_chapters(
 
     Ok(())
 }
+
+pub fn example_toml() {
+    print!(
+        "title = \"Example title\"
+author = \"Example author\"
+
+[[chapters]]
+title = \"Chapter 1\"
+start = 0
+end = 1000
+
+[[chapters]]
+title = \"Chapter 2\"
+start = 1000
+end = 2000
+
+[[chapters]]
+title = \"Chapter 3\"
+start = 2000
+end = 3000
+        "
+    )
+}

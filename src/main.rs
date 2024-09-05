@@ -1,6 +1,5 @@
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files,
-    number_chapters, number_files, show_chapters, show_tags, toml_to_chapters,
+    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files, example_toml, number_chapters, number_files, show_chapters, show_tags, toml_to_chapters
 };
 use clap::{command, parser::ValuesRef, value_parser, Arg, ArgMatches, Command};
 
@@ -66,6 +65,7 @@ fn main() -> anyhow::Result<()> {
                 let ffmpeg_path: &String = args.get_one("ffmpeg-path").unwrap();
                 toml_to_chapters(path, output, toml, &ffmpeg_path)?;
             }
+            "example-toml" => example_toml(),
             _ => {}
         }
     }
@@ -73,199 +73,172 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn cli() -> ArgMatches {
-    let matches = command!().subcommand_required(true)
-    .about("Tool to prepare audiobook files by changing metadata and combining multiple mp3 files into one m4b")
+    let matches = command!()
+        .subcommand_required(true)
+        .about(
+            "Tool to prepare audiobook files by changing metadata and \
+            combining multiple mp3 files into one m4b",
+        )
         .subcommand(
             Command::new("show-tags")
-            .about("Show common ID3 tags from files.")
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            ))
-
+                .about("Show common ID3 tags from files.")
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                ),
+        )
         .subcommand(
             Command::new("number-files")
-            .about("Update the track number tag of each file with a sequential number, starting from the specified value. The starting number must be positiv or zero")
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
-            .arg(
-                Arg::new("start")
-                .long("start")
-                .short('s')
-                .value_parser(value_parser!(u32))
-                .default_value("1")
-            )
+                .about(
+                    "Update the track number tag of each file with a sequential \
+                    number, starting from the specified value. The starting \
+                    number must be positiv or zero",
+                )
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                )
+                .arg(
+                    Arg::new("start")
+                        .long("start")
+                        .short('s')
+                        .value_parser(value_parser!(u32))
+                        .default_value("1"),
+                ),
         )
         .subcommand(
             Command::new("number-file-titles")
-            .about("Update the title tag of each file with a name based on a naming scheme, replacing '%n' with a sequential number, starting from specified value.")
-            .arg(
-                Arg::new("naming-scheme")
-                .required(true)
-            )
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
-            .arg(
-                Arg::new("start")
-                .long("start")
-                .short('s')
-                .value_parser(value_parser!(i32))
-                .default_value("1")
-            )
+                .about(
+                    "Update the title tag of each file with a name based on a \
+                    naming scheme, replacing '%n' with a sequential number, \
+                    starting from specified value.",
+                )
+                .arg(Arg::new("naming-scheme").required(true))
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                )
+                .arg(
+                    Arg::new("start")
+                        .long("start")
+                        .short('s')
+                        .value_parser(value_parser!(i32))
+                        .default_value("1"),
+                ),
         )
         .subcommand(
             Command::new("change-title")
-            .about("Change the title tag of each specified file to the given title.")
-            .arg(
-                Arg::new("title")
-                .required(true)
-            )
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
+                .about("Change the title tag of each specified file to the given title.")
+                .arg(Arg::new("title").required(true))
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                ),
         )
         .subcommand(
             Command::new("change-author")
-            .about("Change the author tag of each specified file to the given author name.")
-            .arg(
-                Arg::new("author")
-                .required(true)
-            )
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
+                .about(
+                    "Change the author tag of each specified \
+                    file to the given author name.",
+                )
+                .arg(Arg::new("author").required(true))
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                ),
         )
         .subcommand(
             Command::new("change-narrator")
-            .about("Change the narrator (composer) tag of each specified file to the given narrator name.")
-            .arg(
-                Arg::new("narrator")
-                .required(true)
-            )
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
+                .about(
+                    "Change the narrator (composer) tag of each specified \
+                    file to the given narrator name.",
+                )
+                .arg(Arg::new("narrator").required(true))
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                ),
         )
         .subcommand(
             Command::new("change-tag")
-            .about("Change a specified tag of each file to the given value.")
-            .arg(
-                Arg::new("tag")
-                .required(true)
-            )
-            .arg(
-                Arg::new("value")
-                .required(true)
-            )
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
+                .about("Change a specified tag of each file to the given value.")
+                .arg(Arg::new("tag").required(true))
+                .arg(Arg::new("value").required(true))
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                ),
         )
         .subcommand(
             Command::new("combine-files")
-            .about("Combine multiple audio files into a single file, with the input files as chapter markers.")
-            .arg(
-                Arg::new("paths")
-                .required(true)
-                .num_args(1..)
-                // .value_parser(value_parser!(PathBuf))
-            )
-            .arg(
-                Arg::new("output")
-                .long("output")
-                .short('o')
-                .default_value("./output.m4b")
-                // .value_parser(value_parser!(PathBuf))
-            )
-            .arg(
-                Arg::new("bitrate")
-                .long("bitrate")
-                .short('b')
-                .default_value("64")
-                .value_parser(value_parser!(u32))
-            )
-            .arg(
-                Arg::new("title")
-                .long("title")
-                .short('t')
-                .default_value("Unknown title")
-            )
-            .arg(
-                Arg::new("author")
-                .long("author")
-                .short('a')
-                .default_value("Unknown author")
-            )
-            .arg(
-                Arg::new("ffmpeg-path")
-                .long("with-ffmpeg")
-                .short('w')
-                .default_value("ffmpeg")
-            )
+                .about(
+                    "Combine multiple audio files into a single file, \
+                    with the input files as chapter markers.",
+                )
+                .arg(
+                    Arg::new("paths").required(true).num_args(1..), // .value_parser(value_parser!(PathBuf))
+                )
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .default_value("./output.m4b"), // .value_parser(value_parser!(PathBuf))
+                )
+                .arg(
+                    Arg::new("bitrate")
+                        .long("bitrate")
+                        .short('b')
+                        .default_value("64")
+                        .value_parser(value_parser!(u32)),
+                )
+                .arg(
+                    Arg::new("title")
+                        .long("title")
+                        .short('t')
+                        .default_value("Unknown title"),
+                )
+                .arg(
+                    Arg::new("author")
+                        .long("author")
+                        .short('a')
+                        .default_value("Unknown author"),
+                )
+                .arg(
+                    Arg::new("ffmpeg-path")
+                        .long("with-ffmpeg")
+                        .short('w')
+                        .default_value("ffmpeg"),
+                ),
         )
         .subcommand(
             Command::new("show-chapters")
-            .about("Show the embedded chapters in an audiobook file (e.g. m4b or mp4)")
-            .arg(
-                Arg::new("path")
-                .required(true)
-            )
+                .about("Show the embedded chapters in an audiobook file (e.g. m4b or mp4)")
+                .arg(Arg::new("path").required(true)),
         )
         .subcommand(
             Command::new("chapters-to-toml")
-            .about("Reads embedded chapters from audiobook file and outputs them to stdout as TOML")
-            .arg(
-                Arg::new("path")
-                .required(true)
-            )
+                .about(
+                    "Reads embedded chapters from audiobook file and \
+                    outputs them to stdout as TOML",
+                )
+                .arg(Arg::new("path").required(true)),
         )
         .subcommand(
             Command::new("toml-to-chapters")
-            .about("Reads TOML-file with chapters and writes them to an audiobook file")
-            .arg(
-                Arg::new("path")
-                .required(true)
-            )
-            .arg(
-                Arg::new("toml")
-                .required(true)
-            )
-            .arg(
-                Arg::new("output")
-                .long("output")
-                .short('o')
-                .default_value("chaptered.m4b")
-            )
-            .arg(
-                Arg::new("ffmpeg-path")
-                .long("with-ffmpeg")
-                .short('w')
-                .default_value("ffmpeg")
-            )
+                .about("Reads TOML-file with chapters and writes them to an audiobook file")
+                .arg(Arg::new("path").required(true))
+                .arg(Arg::new("toml").required(true))
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .default_value("chaptered.m4b"),
+                )
+                .arg(
+                    Arg::new("ffmpeg-path")
+                        .long("with-ffmpeg")
+                        .short('w')
+                        .default_value("ffmpeg"),
+                ),
         )
-    .get_matches();
+        .subcommand(Command::new("example-toml").about(
+            "Outputs an example TOML to stdout as a template for creating \
+                chapters for an audiobook file",
+        ))
+        .get_matches();
 
     matches
 }
