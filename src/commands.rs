@@ -198,7 +198,6 @@ pub fn toml_to_chapters(
     toml_path: &str,
     ffmpeg_path: &str,
 ) -> Result<()> {
-    // BUG Windows Only: FFmpeg error "stream did not contain valid UTF-8"
     let mut toml = String::new();
     File::open(toml_path)?.read_to_string(&mut toml)?;
     ChapterList::from_toml(&toml)?.write_to_file(path, output, ffmpeg_path)?;
