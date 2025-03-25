@@ -151,6 +151,7 @@ pub fn combine_files(
 
     let bitrate = format!("{bitrate}k");
 
+    // FIXME FFmpeg doens't show time, bitrate and speed when processing
     let arguments = [
         "-f",
         "concat",

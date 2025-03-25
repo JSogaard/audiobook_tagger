@@ -14,13 +14,13 @@ fn main() {
         Commands::ChangeAuthor { author, paths } => change_author(&author, paths),
         Commands::ChangeNarrator { narrator, paths } => change_narrator(&narrator, paths),
         Commands::ChangeTag { tag, value, paths } => change_tag(&tag, &value, paths),
-        Commands::CombineFiles { paths, output, bitrate, title, author, ffmpeg_path } => {
-            combine_files(paths, &output, bitrate, &title, &author, &ffmpeg_path)
+        Commands::CombineFiles { input, output, bitrate, title, author, ffmpeg_path } => {
+            combine_files(input, &output, bitrate, &title, &author, &ffmpeg_path)
         },
         Commands::ShowChapters { path } => show_chapters(&path),
         Commands::ChaptersToToml { path } => chapters_to_toml(&path),
-        Commands::TomlToChapters { path, toml, output, ffmpeg_path } => {
-            toml_to_chapters(&path, &output, &toml, &ffmpeg_path)
+        Commands::TomlToChapters { input, toml, output, ffmpeg_path } => {
+            toml_to_chapters(&input, &output, &toml, &ffmpeg_path)
         },
         Commands::ExampleToml => {
             example_toml();
@@ -106,7 +106,7 @@ enum Commands {
     /// with the input files as chapter markers.
     CombineFiles {
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        input: Vec<String>,
         /// Output path
         #[arg(long, short, default_value="./output.m4b")]
         output: String,
@@ -135,7 +135,7 @@ enum Commands {
     /// Reads TOML-file with chapters and writes them to an audiobook file.
     TomlToChapters {
         /// Audio input path
-        path: String,
+        input: String,
         /// Path to TOML
         toml: String,
         /// Audio output path
