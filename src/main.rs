@@ -33,9 +33,10 @@ fn main() {
 }
 
 #[derive(Parser)]
-#[command(name = "Audiobook Takker")]
+#[command(name = "Audiobook Tagger")]
 #[command(about = "Tool to prepare audiobook files by changing metadata and \
             combining multiple mp3 files into one m4b")]
+#[command(version)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
