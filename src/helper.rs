@@ -1,5 +1,4 @@
 use crate::{Error, Result};
-use clap::parser::ValuesRef;
 use id3::{Content, Frame, Tag, TagLike, Version};
 use std::{collections::BTreeSet, io, path::{Path, PathBuf}, process::Command};
 
@@ -38,7 +37,7 @@ use std::{collections::BTreeSet, io, path::{Path, PathBuf}, process::Command};
 //     Ok(ffmetadata)
 // }
 
-pub fn expand_wildcards(raw_paths: ValuesRef<String>) -> Result<BTreeSet<PathBuf>> {
+pub fn expand_wildcards(raw_paths: Vec<String>) -> Result<BTreeSet<PathBuf>> {
     let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
     for raw_path in raw_paths {

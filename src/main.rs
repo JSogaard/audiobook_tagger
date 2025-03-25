@@ -1,7 +1,36 @@
+use audiobook_tagger::{change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files, example_toml, number_chapters, number_files, show_chapters, show_tags, toml_to_chapters};
 use clap::{Parser, Subcommand};
 
 fn main() {
-    let _cli = Cli::parse();
+    let cli = Cli::parse();
+
+    let result = match cli.command {
+        Commands::ShowTags { paths } => show_tags(paths),
+        Commands::NumberFiles { paths, start } => number_files(paths, start),
+        Commands::NumberFileTitles { naming_scheme, paths, start } => {
+            number_chapters(&naming_scheme, paths, start)
+        },
+        Commands::ChangeTitle { title, paths } => change_title(&title, paths),
+        Commands::ChangeAuthor { author, paths } => change_author(&author, paths),
+        Commands::ChangeNarrator { narrator, paths } => change_narrator(&narrator, paths),
+        Commands::ChangeTag { tag, value, paths } => change_tag(&tag, &value, paths),
+        Commands::CombineFiles { paths, output, bitrate, title, author, ffmpeg_path } => {
+            combine_files(paths, &output, bitrate, &title, &author, &ffmpeg_path)
+        },
+        Commands::ShowChapters { path } => show_chapters(&path),
+        Commands::ChaptersToToml { path } => chapters_to_toml(&path),
+        Commands::TomlToChapters { path, toml, output, ffmpeg_path } => {
+            toml_to_chapters(&path, &output, &toml, &ffmpeg_path)
+        },
+        Commands::ExampleToml => {
+            example_toml();
+            Ok(())
+        },
+    };
+
+    if let Err(e) = result {
+        eprintln!("Error:\n{}", e);
+    }
 }
 
 #[derive(Parser)]
@@ -18,23 +47,26 @@ enum Commands {
     /// Show common ID3 tags from files.
     ShowTags {
         #[arg(num_args = 1..)]
-        paths: String
+        paths: Vec<String>
     },
 
     /// Update the track number tag of each file with a sequential
-    /// number, starting from specified value.
+    /// number.
     NumberFiles {
         #[arg(num_args = 1..)]
-        paths: String,
+        paths: Vec<String>,
+        /// Start value for numbering
         #[arg(long, short, default_value_t = 1)]
         start: u32,
     },
 
     /// Change the title tag of each specified file to the given title.
     NumberFileTitles {
+        /// String containing format specifier '%n' for the number
         naming_scheme: String,
         #[arg(num_args = 1..)]
         paths: Vec<String>,
+        /// Start value for numbering
         #[arg(long, short, default_value_t = 1)]
         start: u32,
     },
@@ -53,17 +85,18 @@ enum Commands {
         paths: Vec<String>,
     },
 
-    /// Tool to prepare audiobook files by changing metadata and 
-    /// combining multiple mp3 files into one m4b.
+    /// Change the narrator (composer) tag of each specified file to the given name.
     ChangeNarrator {
         narrator: String,
         #[arg(num_args = 1..)]
         paths: Vec<String>,
     },
 
-    /// Change a specified tag of each file to the given value.
+    /// Change a specified ID3 tag of each file to the given value.
     ChangeTag {
+        /// ID3 tag id
         tag: String,
+        /// New tag value
         value: String,
         #[arg(num_args = 1..)]
         paths: Vec<String>,
@@ -74,14 +107,17 @@ enum Commands {
     CombineFiles {
         #[arg(num_args = 1..)]
         paths: Vec<String>,
+        /// Output path
         #[arg(long, short, default_value="./output.m4b")]
         output: String,
+        /// Audio bitrate
         #[arg(long, short, default_value_t = 64)]
         bitrate: u32,
         #[arg(long, short, default_value="Unknown Title")]
         title: String,
         #[arg(long, short, default_value="Unknown Author")]
         author: String,
+        /// Path to ffmpeg
         #[arg(long, short, default_value="ffmpeg")]
         ffmpeg_path: String,
     },
@@ -98,15 +134,19 @@ enum Commands {
 
     /// Reads TOML-file with chapters and writes them to an audiobook file.
     TomlToChapters {
+        /// Audio input path
         path: String,
+        /// Path to TOML
         toml: String,
+        /// Audio output path
         #[arg(long, short, default_value = "chaptered.m4b")]
         output: String,
+        /// Path to ffmpeg
         #[arg(long, short, default_value = "ffmpeg")]
         ffmpeg_path: String,
     },
 
-    /// Outputs an example TOML to stdout as a template for creating chapters for an audiobook file.
+    /// Outputs an example TOML to stdout.
     ExampleToml,
 }
 

@@ -111,7 +111,6 @@ impl ChapterList {
     }
 
     pub fn from_chaptered_file(path: &str) -> Result<ChapterList> {
-        let path = path.as_ref();
         let arguments = [
             "-v",
             "quiet",
@@ -127,7 +126,7 @@ impl ChapterList {
             }
             Err(err) => return Err(Error::IoError(err)),
         };
-        let tag = read_tag(&PathBuf::from(path))?;
+        let tag = read_tag(PathBuf::from(path))?;
         let title = tag.title().unwrap_or("Unknown title").to_string();
         let author = tag.artist().unwrap_or("Unknown author").to_string();
         let mut chapter_list = ChapterList::new(title, author);
@@ -208,7 +207,7 @@ impl ChapterList {
     }
 
     pub fn toml(&self) -> Result<String> {
-        toml::to_string(self).map_err(|err| Error::TomlSerializationError(err))
+        toml::to_string(self).map_err(Error::TomlSerializationError)
     }
 
     pub fn iter(&self) -> Iter<'_, Chapter> {
@@ -229,6 +228,10 @@ impl ChapterList {
 
     pub fn len(&self) -> usize {
         self.chapters.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn push(&mut self, new_chapter: Chapter) {
@@ -269,6 +272,6 @@ impl Display for ChapterList {
         for chapter in &self.chapters {
             table.add_row(row![chapter.title(), chapter.start(), chapter.end()]);
         }
-        write!(f, "{}", table.to_string())
+        write!(f, "{}", table)
     }
 }

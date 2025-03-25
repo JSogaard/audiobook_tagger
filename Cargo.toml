@@ -4,8 +4,7 @@ version = "0.2.2"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.86"
-clap = { version = "4.5.17", features = ["derive", "cargo"] }
+clap = { version = "4.5.17", features = ["derive"] }
 glob = "0.3.1"
 id3 = "1.14.0"
 mp3-duration = "0.1.10"

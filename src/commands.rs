@@ -1,6 +1,5 @@
 use crate::errors::*;
 use chapters::ChapterList;
-use clap::parser::ValuesRef;
 use helper::*;
 use id3::{Tag, TagLike};
 use prettytable::{row, Table};
@@ -14,7 +13,7 @@ use tempfile::NamedTempFile;
 
 use crate::{chapters, helper};
 
-pub fn show_tags(paths: ValuesRef<String>) -> Result<()> {
+pub fn show_tags(paths: Vec<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = helper::expand_wildcards(paths)?;
     let mut table = Table::new();
     table.set_titles(row![
@@ -29,7 +28,8 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<()> {
     ]);
 
     for path in &paths {
-        let tag = Tag::read_from_path(&path).unwrap_or(Tag::new());
+        // TODO Limit the length of strings
+        let tag = Tag::read_from_path(path).unwrap_or_default();
         let file_name: &str = match path.file_name() {
             Some(file_name) => &file_name.to_string_lossy(),
             None => return Err(Error::NoFilesFountError),
@@ -62,7 +62,7 @@ pub fn show_tags(paths: ValuesRef<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<()> {
+pub fn number_files(paths: Vec<String>, start: u32) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
@@ -75,7 +75,7 @@ pub fn number_files(paths: ValuesRef<String>, start: u32) -> Result<()> {
     Ok(())
 }
 
-pub fn number_chapters(naming_scheme: &str, paths: ValuesRef<String>, start: i32) -> Result<()> {
+pub fn number_chapters(naming_scheme: &str, paths: Vec<String>, start: u32) -> Result<()> {
     if !naming_scheme.contains("%n") {
         return Err(Error::NoFormatSpecifierError("%n".to_string()));
     }
@@ -88,7 +88,7 @@ pub fn number_chapters(naming_scheme: &str, paths: ValuesRef<String>, start: i32
     Ok(())
 }
 
-pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<()> {
+pub fn change_title(title: &str, paths: Vec<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -97,7 +97,7 @@ pub fn change_title(title: &str, paths: ValuesRef<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<()> {
+pub fn change_author(author: &str, paths: Vec<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -106,7 +106,7 @@ pub fn change_author(author: &str, paths: ValuesRef<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<()> {
+pub fn change_narrator(narrator: &str, paths: Vec<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -115,7 +115,7 @@ pub fn change_narrator(narrator: &str, paths: ValuesRef<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_tag(frame_id: &str, new_text: &str, paths: ValuesRef<String>) -> Result<()> {
+pub fn change_tag(frame_id: &str, new_text: &str, paths: Vec<String>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -125,7 +125,7 @@ pub fn change_tag(frame_id: &str, new_text: &str, paths: ValuesRef<String>) -> R
 }
 
 pub fn combine_files(
-    paths: ValuesRef<String>,
+    paths: Vec<String>,
     output: &str,
     bitrate: u32,
     title: &str,
@@ -190,6 +190,7 @@ pub fn toml_to_chapters(
     toml_path: &str,
     ffmpeg_path: &str,
 ) -> Result<()> {
+    // BUG FFmpeg error "stream did not contain valid UTF-8"
     let mut toml = String::new();
     File::open(toml_path)?.read_to_string(&mut toml)?;
     ChapterList::from_toml(&toml)?.write_to_file(path, output, ffmpeg_path)?;
