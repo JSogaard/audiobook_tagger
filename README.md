@@ -10,7 +10,7 @@ cargo install --git https://github.com/JSogaard/audiobook_tagger
 ```
 show-tags           Show common ID3 tags from files
 number-files        Update the track number tag of each file with a sequential number
-number-file-titles  Change the title tag of each specified file to the given title
+number-file-titles  Update the title tag of each file with a name based on a naming scheme, replacing '%n' with a sequential number
 change-title        Change the title tag of each specified file to the given title
 change-author       Change the author tag of each specified file to the given author name
 change-narrator     Change the narrator (composer) tag of each specified file to the given name

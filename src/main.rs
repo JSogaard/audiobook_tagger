@@ -60,7 +60,8 @@ enum Commands {
         start: u32,
     },
 
-    /// Change the title tag of each specified file to the given title.
+    /// Update the title tag of each file with a name based on a 
+    /// naming scheme, replacing '%n' with a sequential number
     NumberFileTitles {
         /// String containing format specifier '%n' for the number
         naming_scheme: String,
