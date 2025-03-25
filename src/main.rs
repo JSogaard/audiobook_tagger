@@ -18,13 +18,12 @@ fn main() {
             combine_files(input, &output, bitrate, &title, &author, &ffmpeg_path)
         },
         Commands::ShowChapters { path } => show_chapters(&path),
-        Commands::ChaptersToToml { path } => chapters_to_toml(&path),
+        Commands::ChaptersToToml { path, output } => chapters_to_toml(&path, output),
         Commands::TomlToChapters { input, toml, output, ffmpeg_path } => {
             toml_to_chapters(&input, &output, &toml, &ffmpeg_path)
         },
-        Commands::ExampleToml => {
-            example_toml();
-            Ok(())
+        Commands::ExampleToml {output} => {
+            example_toml(output)
         },
     };
 
@@ -127,9 +126,12 @@ enum Commands {
         path: String,
     },
 
-    /// Reads embedded chapters from audiobook file and outputs them to stdout as TOML.
+    /// Reads embedded chapters from audiobook file and outputs TOML to file or stdout.
     ChaptersToToml {
         path: String,
+        /// Optional file output path
+        #[arg(long, short)]
+        output: Option<String>,
     },
 
     /// Reads TOML-file with chapters and writes them to an audiobook file.
@@ -147,7 +149,11 @@ enum Commands {
     },
 
     /// Outputs an example TOML to stdout.
-    ExampleToml,
+    ExampleToml {
+        /// Optional file output path
+        #[arg(long, short)]
+        output: Option<String>,
+    },
 }
 
 // fn main() -> anyhow::Result<()> {

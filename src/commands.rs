@@ -151,7 +151,7 @@ pub fn combine_files(
 
     let bitrate = format!("{bitrate}k");
 
-    // FIXME FFmpeg doens't show time, bitrate and speed when processing
+    // BUG FFmpeg doens't show time, bitrate and speed when processing
     let arguments = [
         "-f",
         "concat",
@@ -178,9 +178,16 @@ pub fn show_chapters(path: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn chapters_to_toml(path: &str) -> Result<()> {
+pub fn chapters_to_toml(path: &str, output: Option<String>) -> Result<()> {
     let chapter_toml = ChapterList::from_chaptered_file(path)?.toml()?;
-    print!("{}", &chapter_toml);
+    
+    match output {
+        Some(output) => {
+            let mut file  = File::create_new(output)?;
+            file.write_all(chapter_toml.as_bytes())?;
+        }
+        None => print!("{}", &chapter_toml),
+    }
 
     Ok(())
 }
@@ -191,7 +198,7 @@ pub fn toml_to_chapters(
     toml_path: &str,
     ffmpeg_path: &str,
 ) -> Result<()> {
-    // BUG FFmpeg error "stream did not contain valid UTF-8"
+    // BUG Windows Only: FFmpeg error "stream did not contain valid UTF-8"
     let mut toml = String::new();
     File::open(toml_path)?.read_to_string(&mut toml)?;
     ChapterList::from_toml(&toml)?.write_to_file(path, output, ffmpeg_path)?;
@@ -199,25 +206,34 @@ pub fn toml_to_chapters(
     Ok(())
 }
 
-pub fn example_toml() {
-    print!(
-        "title = \"Example title\"
-author = \"Example author\"
+pub fn example_toml(output: Option<String>) -> Result<()> {
+    // Write directly to file
+    match output {
+        Some(output) => {
+            let mut file = File::create_new(output)?;
+            file.write_all(EXAMPLE_TOML.as_bytes())?;
+        }
+        None => println!("{}", EXAMPLE_TOML),
+    }
+
+    Ok(())
+}
+
+const EXAMPLE_TOML: &str = r#"title = "Example title"
+author = "Example author"
 
 [[chapters]]
-title = \"Chapter 1\"
+title = "Chapter 1"
 start = 0
 end = 1000
 
 [[chapters]]
-title = \"Chapter 2\"
+title = "Chapter 2"
 start = 1000
 end = 2000
 
 [[chapters]]
-title = \"Chapter 3\"
+title = "Chapter 3"
 start = 2000
 end = 3000
-        "
-    )
-}
+"#;

@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
         {
             "type": "lldb",
             "request": "launch",
@@ -13,7 +14,7 @@
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=audiobook_tagger"
+                    "--package=audiobook-tagger"
                 ],
                 "filter": {
                     "name": "audiobook_tagger",
@@ -26,57 +27,39 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'audiobook_tagger'",
+            "name": "Debug executable 'audiobook-tagger' with arguments",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=audiobook_tagger",
-                    "--package=audiobook_tagger"
+                    "--bin=audiobook-tagger",
+                    "--package=audiobook-tagger"
                 ],
                 "filter": {
-                    "name": "audiobook_tagger",
+                    "name": "audiobook-tagger",
                     "kind": "bin"
                 }
             },
-            "args": [],
+            "args": ["toml-to-chapters", ".\\test_audiobook\\output-file.m4b", ".\\test_audiobook\\chapters.toml"],
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'audiobook_tagger'",
+            "name": "Debug unit tests in executable 'audiobook-tagger'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=audiobook_tagger",
-                    "--package=audiobook_tagger"
+                    "--bin=audiobook-tagger",
+                    "--package=audiobook-tagger"
                 ],
                 "filter": {
-                    "name": "audiobook_tagger",
+                    "name": "audiobook-tagger",
                     "kind": "bin"
                 }
             },
             "args": [],
             "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'audiobook_tagger with arguments'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=audiobook_tagger",
-                    "--package=audiobook_tagger"
-                ],
-                "filter": {
-                    "name": "audiobook_tagger",
-                    "kind": "bin"
-                }
-            },
-            "args": ["combine-files", "test_audiobook/*", "-o", "test_audiobook/output.m4b"],
-            "cwd": "${workspaceFolder}"
-        },
+        }
     ]
 }

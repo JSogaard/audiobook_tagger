@@ -2,41 +2,6 @@ use crate::{Error, Result};
 use id3::{Content, Frame, Tag, TagLike, Version};
 use std::{collections::BTreeSet, io, path::{Path, PathBuf}, process::Command};
 
-// pub fn generate_metadata(
-//     paths: &BTreeSet<PathBuf>,
-//     title: &str,
-//     author: &str,
-// ) -> Result<String> {
-//     let mut ffmetadata: String = format!(
-//         ";FFMETADATA
-// title={title}
-// artist={author}
-// genre=AudioBook
-// "
-//     );
-//     let mut playhead: u32 = 0;
-
-//     for path in paths {
-//         let tag = read_tag(path)?;
-//         let chapter_title = tag.title().unwrap_or("Chapter");
-//         let duration = mp3_duration::from_path(path)?.as_millis() as u32;
-//         let start = playhead;
-//         let end = playhead + duration;
-
-//         ffmetadata.push_str(&format!(
-//             "
-// [CHAPTER]
-// TIMEBASE=1/1000
-// START={start}
-// END={end}
-// title={chapter_title}
-// "
-//         ));
-//         playhead = end;
-//     }
-//     Ok(ffmetadata)
-// }
-
 pub fn expand_wildcards(raw_paths: Vec<String>) -> Result<BTreeSet<PathBuf>> {
     let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
@@ -57,7 +22,7 @@ pub fn expand_wildcards(raw_paths: Vec<String>) -> Result<BTreeSet<PathBuf>> {
 }
 
 pub fn write_tag(path: &PathBuf, frame_id: &str, new_text: &str) -> Result<()> {
-    let mut tag: Tag = read_tag(&path)?;
+    let mut tag: Tag = read_tag(path)?;
     let frame = Frame::with_content(frame_id, Content::Text(new_text.to_string()));
     tag.add_frame(frame);
     if let Err(err) = tag.write_to_path(path, Version::Id3v23) {
@@ -74,7 +39,7 @@ pub fn read_tag(path: impl AsRef<Path>) -> Result<Tag> {
             ..
         }) => Ok(Tag::new()),
         Err(err) => {
-            return Err(Error::Id3Error(err));
+            Err(Error::Id3Error(err))
         }
     }
 }
