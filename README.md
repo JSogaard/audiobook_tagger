@@ -1,6 +1,8 @@
 ## Audiobook Tagger
 CLI tool to prepare audiobook files by changing metadata and combining multiple mp3 files into one m4b.
 
+*Mainly meant for personal use. I cannot make any guarantees regarding stability or maintenance*.
+
 ### Installation
 Installation/updates via Cargo (requires the [Rust toolchain](https://rustup.rs/)):
 ```
