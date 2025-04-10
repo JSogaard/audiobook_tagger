@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use audiobook_tagger::{
     change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files,
     example_toml, number_chapters, number_files, show_chapters, show_tags, toml_to_chapters,
@@ -58,14 +59,14 @@ enum Commands {
     /// Show common ID3 tags from files.
     ShowTags {
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 
     /// Update the track number tag of each file with a sequential
     /// number.
     NumberFiles {
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
         /// Start value for numbering
         #[arg(long, short, default_value_t = 1)]
         start: u32,
@@ -77,7 +78,7 @@ enum Commands {
         /// String containing format specifier '%n' for the number
         naming_scheme: String,
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
         /// Start value for numbering
         #[arg(long, short, default_value_t = 1)]
         start: u32,
@@ -87,21 +88,21 @@ enum Commands {
     ChangeTitle {
         title: String,
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 
     /// Change the author tag of each specified file to the given author name.
     ChangeAuthor {
         author: String,
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 
     /// Change the narrator (composer) tag of each specified file to the given name.
     ChangeNarrator {
         narrator: String,
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 
     /// Change a specified ID3 tag of each file to the given value.
@@ -111,17 +112,17 @@ enum Commands {
         /// New tag value
         value: String,
         #[arg(num_args = 1..)]
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 
     /// Combine multiple audio files into a single file,
     /// with the input files as chapter markers.
     CombineFiles {
         #[arg(num_args = 1..)]
-        input: Vec<String>,
+        input: Vec<PathBuf>,
         /// Output path
         #[arg(long, short, default_value = "./output.m4b")]
-        output: String,
+        output: PathBuf,
         /// Audio bitrate
         #[arg(long, short, default_value_t = 64)]
         bitrate: u32,
@@ -131,38 +132,38 @@ enum Commands {
         author: String,
         /// Path to ffmpeg
         #[arg(long, short, default_value = "ffmpeg")]
-        ffmpeg_path: String,
+        ffmpeg_path: PathBuf,
     },
 
     /// Show the embedded chapters in an audiobook file (e.g. m4b or mp4).
-    ShowChapters { path: String },
+    ShowChapters { path: PathBuf },
 
-    /// Reads embedded chapters from audiobook file and outputs TOML to file or stdout.
+    /// Reads embedded chapters from audiobook file and :s TOML to file or stdout.
     ChaptersToToml {
-        path: String,
+        path: PathBuf,
         /// Optional file output path
         #[arg(long, short)]
-        output: Option<String>,
+        output: Option<PathBuf>,
     },
 
     /// Reads TOML-file with chapters and writes them to an audiobook file.
     TomlToChapters {
         /// Audio input path
-        input: String,
+        input: PathBuf,
         /// Path to TOML
-        toml: String,
+        toml: PathBuf,
         /// Audio output path
         #[arg(long, short, default_value = "chaptered.m4b")]
-        output: String,
+        output: PathBuf,
         /// Path to ffmpeg
         #[arg(long, short, default_value = "ffmpeg")]
-        ffmpeg_path: String,
+        ffmpeg_path: PathBuf,
     },
 
     /// Outputs an example TOML to stdout.
     ExampleToml {
         /// Optional file output path
         #[arg(long, short)]
-        output: Option<String>,
+        output: Option<PathBuf>,
     },
 }

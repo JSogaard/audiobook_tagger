@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use mp3_duration::MP3DurationError;
 use thiserror::Error;
 
@@ -25,7 +26,7 @@ pub enum Error {
     FfmpegError(i32),
 
     #[error("Could not find ffmpeg executable: {0}")]
-    FfmpegNotFoundError(String),
+    FfmpegNotFoundError(PathBuf),
 
     #[error("Could not find ffprobe. It is automatically installed with ffmpeg")]
     FfprobeNotFoundError(),
@@ -40,7 +41,10 @@ pub enum Error {
     TomlDeserializationError(#[from] toml::de::Error),
 
     #[error("Filed to read from stdin")]
-    StdinError
+    StdinError,
+
+    #[error("Path input was invalid: {0}")]
+    InvalidPathError(PathBuf),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

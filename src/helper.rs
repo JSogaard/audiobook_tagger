@@ -2,11 +2,11 @@ use crate::{Error, Result};
 use id3::{Content, Frame, Tag, TagLike, Version};
 use std::{collections::BTreeSet, io, path::{Path, PathBuf}, process::Command};
 
-pub fn expand_wildcards(raw_paths: Vec<String>) -> Result<BTreeSet<PathBuf>> {
+pub fn expand_wildcards(raw_paths: Vec<PathBuf>) -> Result<BTreeSet<PathBuf>> {
     let mut parsed_paths: BTreeSet<PathBuf> = BTreeSet::new();
 
     for raw_path in raw_paths {
-        match glob::glob(&raw_path) {
+        match glob::glob(raw_path.to_str().ok_or_else(|| Error::InvalidPathError(raw_path.clone()))?) {
             Ok(globs) => {
                 for glob_path in globs {
                     parsed_paths.insert(glob_path.unwrap().canonicalize()?);
@@ -44,11 +44,11 @@ pub fn read_tag(path: impl AsRef<Path>) -> Result<Tag> {
     }
 }
 
-pub fn run_ffmpeg<'a>(ffmpeg_path: &str, arguments: impl IntoIterator<Item = &'a str>) -> Result<()> {
+pub fn run_ffmpeg<'a>(ffmpeg_path: &Path, arguments: impl IntoIterator<Item = &'a str>) -> Result<()> {
     let status = match Command::new(ffmpeg_path).args(arguments).status() {
         Ok(status) => status,
         Err(err) if err.kind() == io::ErrorKind::NotFound => {
-            return Err(Error::FfmpegNotFoundError(ffmpeg_path.to_string()))
+            return Err(Error::FfmpegNotFoundError(ffmpeg_path.to_owned()))
         }
         Err(err) => return Err(Error::IoError(err)),
     };

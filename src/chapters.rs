@@ -110,14 +110,14 @@ impl ChapterList {
         })
     }
 
-    pub fn from_chaptered_file(path: &str) -> Result<ChapterList> {
+    pub fn from_chaptered_file(path: &Path) -> Result<ChapterList> {
         let arguments = [
             "-v",
             "quiet",
             "-print_format",
             "json",
             "-show_chapters",
-            path,
+            path.to_str().ok_or_else(|| Error::InvalidPathError(path.to_owned()))?,
         ];
         let output = match Command::new("ffprobe").args(arguments).output() {
             Ok(output) => output,
@@ -176,9 +176,9 @@ impl ChapterList {
 
     pub fn write_to_file(
         &self,
-        input_path: &str,
-        output_path: &str,
-        ffmpeg_path: &str,
+        input_path: &Path,
+        output_path: &Path,
+        ffmpeg_path: &Path,
     ) -> Result<()> {
         let ffmetadata: String = self.ffmetadata();
 
@@ -188,7 +188,7 @@ impl ChapterList {
 
         let arguments = [
             "-i",
-            input_path,
+            input_path.to_str().ok_or_else(|| Error::InvalidPathError(input_path.to_owned()))?,
             "-i",
             &ffmetadata_tmp_path,
             // "-map",
@@ -199,7 +199,7 @@ impl ChapterList {
             "1",
             "-c",
             "copy",
-            output_path,
+            output_path.to_str().ok_or_else(|| Error::InvalidPathError(output_path.to_owned()))?,
         ];
         run_ffmpeg(ffmpeg_path, arguments)?;
 

@@ -9,11 +9,12 @@ use std::{
     io::{Read, Write},
     path::PathBuf,
 };
+use std::path::Path;
 use tempfile::NamedTempFile;
 
 use crate::{chapters, helper};
 
-pub fn show_tags(paths: Vec<String>) -> Result<()> {
+pub fn show_tags(paths: Vec<PathBuf>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = helper::expand_wildcards(paths)?;
     let mut table = Table::new();
     table.set_titles(row![
@@ -62,7 +63,7 @@ pub fn show_tags(paths: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn number_files(paths: Vec<String>, start: u32) -> Result<()> {
+pub fn number_files(paths: Vec<PathBuf>, start: u32) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for (path, i) in paths.iter().zip(start..) {
@@ -75,7 +76,7 @@ pub fn number_files(paths: Vec<String>, start: u32) -> Result<()> {
     Ok(())
 }
 
-pub fn number_chapters(naming_scheme: &str, paths: Vec<String>, start: u32) -> Result<()> {
+pub fn number_chapters(naming_scheme: &str, paths: Vec<PathBuf>, start: u32) -> Result<()> {
     if !naming_scheme.contains("%n") {
         return Err(Error::NoFormatSpecifierError("%n".to_string()));
     }
@@ -88,7 +89,7 @@ pub fn number_chapters(naming_scheme: &str, paths: Vec<String>, start: u32) -> R
     Ok(())
 }
 
-pub fn change_title(title: &str, paths: Vec<String>) -> Result<()> {
+pub fn change_title(title: &str, paths: Vec<PathBuf>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -97,7 +98,7 @@ pub fn change_title(title: &str, paths: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_author(author: &str, paths: Vec<String>) -> Result<()> {
+pub fn change_author(author: &str, paths: Vec<PathBuf>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -106,7 +107,7 @@ pub fn change_author(author: &str, paths: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_narrator(narrator: &str, paths: Vec<String>) -> Result<()> {
+pub fn change_narrator(narrator: &str, paths: Vec<PathBuf>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -115,7 +116,7 @@ pub fn change_narrator(narrator: &str, paths: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn change_tag(frame_id: &str, new_text: &str, paths: Vec<String>) -> Result<()> {
+pub fn change_tag(frame_id: &str, new_text: &str, paths: Vec<PathBuf>) -> Result<()> {
     let paths: BTreeSet<PathBuf> = expand_wildcards(paths)?;
 
     for path in &paths {
@@ -125,15 +126,15 @@ pub fn change_tag(frame_id: &str, new_text: &str, paths: Vec<String>) -> Result<
 }
 
 pub fn combine_files(
-    paths: Vec<String>,
-    output: &str,
+    paths: Vec<PathBuf>,
+    output: &Path,
     bitrate: u32,
     title: &str,
     author: &str,
-    ffmpeg_path: &str,
+    ffmpeg_path: &Path,
 ) -> Result<()> {
     let paths = expand_wildcards(paths)?;
-    let file_tmp_buf: String = paths
+    let file_tmp_buf = paths
         .iter()
         .map(|path| format!("file '{}'", path.to_string_lossy()))
         .collect::<Vec<String>>()
@@ -143,7 +144,7 @@ pub fn combine_files(
     let files_tmp_path = files_tmp.path().to_string_lossy();
 
     let mut ffmetadata_tmp = NamedTempFile::new()?;
-    // let ffmetadata: String = generate_metadata(&paths, title, author)?;
+    // let ffmetadata: String = generate_metadata(paths, title, author)?;
     let chapter_list = ChapterList::from_path_set(paths, title.to_string(), author.to_string())?;
     let ffmetadata = chapter_list.ffmetadata();
     ffmetadata_tmp.write_all(ffmetadata.as_bytes())?;
@@ -167,18 +168,18 @@ pub fn combine_files(
         "aac",
         "-b:a",
         &bitrate,
-        output,
+        output.to_str().ok_or_else(|| Error::InvalidPathError(output.to_owned()))?,
     ];
     run_ffmpeg(ffmpeg_path, arguments)
 }
 
-pub fn show_chapters(path: &str) -> Result<()> {
+pub fn show_chapters(path: &Path) -> Result<()> {
     let chapter_list = ChapterList::from_chaptered_file(path)?;
     println!("{}", chapter_list);
     Ok(())
 }
 
-pub fn chapters_to_toml(path: &str, output: Option<String>) -> Result<()> {
+pub fn chapters_to_toml(path: &Path, output: Option<PathBuf>) -> Result<()> {
     let chapter_toml = ChapterList::from_chaptered_file(path)?.toml()?;
     
     match output {
@@ -193,19 +194,19 @@ pub fn chapters_to_toml(path: &str, output: Option<String>) -> Result<()> {
 }
 
 pub fn toml_to_chapters(
-    path: &str,
-    output: &str,
-    toml_path: &str,
-    ffmpeg_path: &str,
+    path: &Path,
+    output: &Path,
+    toml_path: &Path,
+    ffmpeg_path: &Path,
 ) -> Result<()> {
     let mut toml = String::new();
     File::open(toml_path)?.read_to_string(&mut toml)?;
-    ChapterList::from_toml(&toml)?.write_to_file(path, output, ffmpeg_path)?;
+    ChapterList::from_toml(&toml)?.write_to_file(path, &output, &ffmpeg_path)?;
 
     Ok(())
 }
 
-pub fn example_toml(output: Option<String>) -> Result<()> {
+pub fn example_toml(output: Option<PathBuf>) -> Result<()> {
     // Write directly to file
     match output {
         Some(output) => {
