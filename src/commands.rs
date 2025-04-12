@@ -179,7 +179,7 @@ pub fn show_chapters(path: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn chapters_to_toml(path: &Path, output: Option<PathBuf>) -> Result<()> {
+pub fn extract_chapters(path: &Path, output: Option<PathBuf>) -> Result<()> {
     let chapter_toml = ChapterList::from_chaptered_file(path)?.toml()?;
     
     match output {
@@ -193,7 +193,7 @@ pub fn chapters_to_toml(path: &Path, output: Option<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-pub fn toml_to_chapters(
+pub fn embed_chapters(
     path: &Path,
     output: &Path,
     toml_path: &Path,

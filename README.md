@@ -19,7 +19,7 @@ change-narrator     Change the narrator (composer) tag of each specified file to
 change-tag          Change a specified ID3 tag of each file to the given value
 combine-files       Combine multiple audio files into a single file, with the input files as chapter markers
 show-chapters       Show the embedded chapters in an audiobook file (e.g. m4b or mp4)
-chapters-to-toml    Reads embedded chapters from audiobook file and outputs TOML to file or stdout
-toml-to-chapters    Reads TOML-file with chapters and writes them to an audiobook file
-example-toml        Outputs an example TOML to stdout
+extract-chapters    Reads embedded chapters from audiobook file and outputs TOML to file or stdout
+embed-chapters      Reads TOML-file with chapters and writes them to an audiobook file
+example-toml        Outputs an example TOML with chapters
 ```

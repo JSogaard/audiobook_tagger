@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use audiobook_tagger::{
-    change_author, change_narrator, change_tag, change_title, chapters_to_toml, combine_files,
-    example_toml, number_chapters, number_files, show_chapters, show_tags, toml_to_chapters,
+    change_author, change_narrator, change_tag, change_title, extract_chapters, combine_files,
+    example_toml, number_chapters, number_files, show_chapters, show_tags, embed_chapters,
 };
 use clap::{Parser, Subcommand};
 
@@ -29,13 +29,13 @@ fn main() {
             ffmpeg_path,
         } => combine_files(input, &output, bitrate, &title, &author, &ffmpeg_path),
         Commands::ShowChapters { path } => show_chapters(&path),
-        Commands::ChaptersToToml { path, output } => chapters_to_toml(&path, output),
-        Commands::TomlToChapters {
+        Commands::ExtractChapters { path, output } => extract_chapters(&path, output),
+        Commands::EmbedChapters {
             input,
             toml,
             output,
             ffmpeg_path,
-        } => toml_to_chapters(&input, &output, &toml, &ffmpeg_path),
+        } => embed_chapters(&input, &output, &toml, &ffmpeg_path),
         Commands::ExampleToml { output } => example_toml(output),
     };
 
@@ -138,8 +138,8 @@ enum Commands {
     /// Show the embedded chapters in an audiobook file (e.g. m4b or mp4).
     ShowChapters { path: PathBuf },
 
-    /// Reads embedded chapters from audiobook file and :s TOML to file or stdout.
-    ChaptersToToml {
+    /// Reads embedded chapters from audiobook file and outputs TOML to file or stdout.
+    ExtractChapters {
         path: PathBuf,
         /// Optional file output path
         #[arg(long, short)]
@@ -147,7 +147,7 @@ enum Commands {
     },
 
     /// Reads TOML-file with chapters and writes them to an audiobook file.
-    TomlToChapters {
+    EmbedChapters {
         /// Audio input path
         input: PathBuf,
         /// Path to TOML
@@ -160,7 +160,7 @@ enum Commands {
         ffmpeg_path: PathBuf,
     },
 
-    /// Outputs an example TOML to stdout.
+    /// Outputs an example TOML with chapters.
     ExampleToml {
         /// Optional file output path
         #[arg(long, short)]
